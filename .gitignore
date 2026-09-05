@@ -10,6 +10,6 @@ wheels/
 .venv
 
 # pylogs
-pylogs_hook.py
-pylogs.db
-.pylogs/
+api/pylogs_hook.py
+api/pylogs.db
+api/.pylogs/
