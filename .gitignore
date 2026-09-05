@@ -13,3 +13,5 @@ wheels/
 api/pylogs_hook.py
 api/pylogs.db
 api/.pylogs/
+
+.env
