@@ -15,3 +15,5 @@ api/pylogs.db
 api/.pylogs/
 
 .env
+
+kuzu.db
