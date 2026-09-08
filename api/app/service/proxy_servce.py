@@ -25,9 +25,13 @@ async def stream_upstream_request(
             json=payload,
             headers=forward_headers
         ) as upstream_response:
+            
             upstream_response.raise_for_status() #raises the HTTP Error if occured
 
-            
-
+            #For sendind data byte by byte aiter)bytes is used
+            async for raw_chunk in upstream_response.aiter_bytes():
+                if raw_chunk:
+                    # will hook KUZU DB logging here 
+                    yield raw_chunk
 
     
