@@ -9,9 +9,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+db = kuzu.Database("./kuzu.db")
+conn = kuzu.Connection(db)
+
 def __init_db__():
-    db = kuzu.Database("./kuzu.db")
-    conn = kuzu.Connection(db)
 
     try:
         conn.execute("CREATE NODE TABLE State(id STRING, step_type STRING, payload STRING, PRIMARY KEY (id))") #

@@ -4,7 +4,7 @@ from app.service.proxy_servce import stream_upstream_request
 
 router = APIRouter()
 
-@router.post("v1/chat/completions")
+@router.post("/v1/chat/completions")
 async def intercept_chat_completions(
     request: Request
 ):
