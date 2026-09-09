@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+
 from app.router.interceptor import router as interceptor_router
 
 app = FastAPI(title="celebi-harness")

@@ -1,5 +1,6 @@
 import kuzu
 import logging
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -9,7 +10,12 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-db = kuzu.Database("./kuzu.db")
+logger.info("Starting db connection")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DB_PATH = str(BASE_DIR/"kuzu.db")
+
+db = kuzu.Database(DB_PATH)
 conn = kuzu.Connection(db)
 
 def __init_db__():
@@ -19,11 +25,15 @@ def __init_db__():
         
         # Create the directional relationship table
         conn.execute("CREATE REL TABLE TRANSITIONED_TO(FROM State TO State)") #
+
+        #the branching relationship
+        conn.execute("CCREATE REL TABLE BEANCHED_TO(FROM State TO State)")
         logger.info("Celebi timeline initialized successfully.")
-    except RuntimeError:
-        logger.error("Time line schema exists, moving to rewind")
+
+    except RuntimeError as e:
+        logger.error(f"Schema check: {e}")
     
     return conn
 
-if __name__ == "__main__":
-    __init_db__()
+
+__init_db__()

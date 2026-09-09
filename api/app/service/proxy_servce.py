@@ -29,6 +29,17 @@ async def stream_upstream_request(
         {"id": prompt_id, "payload": json.dumps(payload)}
     )
 
+    parent_id = headers.get("x-celebi-parent-id")
+
+    if parent_id:
+        conn.execute(
+            """
+            MATCH (parent:State), (prompt:State)
+            WHERE parent.id = $parent_id AND prompt.id = $prompt_id
+            CREATE (parent)-[:]
+            """
+        )
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         async with client.stream(
             "POST",
