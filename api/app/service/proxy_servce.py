@@ -19,25 +19,27 @@ async def stream_upstream_request(
 
     #Clean the headers so we don't send conflicting host length
     forward_headers = {
-        "Authorization": headers.get("authorization", ""),
+        "Authorization": headers.get("authorization", "") or headers.get("Authorization",""),
         "Content-Type": "application/json"
     }
 
+    response_id = str(uuid.uuid4())
     prompt_id = str(uuid.uuid4())
     conn.execute(
         "CREATE (s:State {id: $id, step_type: 'prompt', payload: $payload})",
         {"id": prompt_id, "payload": json.dumps(payload)}
     )
 
-    parent_id = headers.get("x-celebi-parent-id")
+    parent_id = headers.get("x-celebi-parent-id") or headers.get("X-Celebi-Parent-Id")
 
     if parent_id:
         conn.execute(
             """
             MATCH (parent:State), (prompt:State)
             WHERE parent.id = $parent_id AND prompt.id = $prompt_id
-            CREATE (parent)-[:]
-            """
+            CREATE (parent)-[:BRANCHED_TO]->(prompt)
+            """,
+            {"parent_id": parent_id, "prompt_id": prompt_id}
         )
 
     async with httpx.AsyncClient(timeout=60.0) as client:
@@ -62,8 +64,6 @@ async def stream_upstream_request(
                     accumalated_response += raw_chunk.decode('utf-8', errors='ignore')
                     yield raw_chunk
 
-            
-            response_id = str(uuid.uuid4())
 
             conn.execute(
                 "CREATE (s:State {id: $id, step_type: 'response', payload: $payload})",
