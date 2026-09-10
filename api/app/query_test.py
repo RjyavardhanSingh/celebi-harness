@@ -9,6 +9,7 @@ def check_timeline():
     conn = kuzu.Connection(db)
     print("Querying....................")
 
+    #query to check bi dorectionality of the graph
     query = """
         MATCH (a:State)-[e]->(b:State) 
         RETURN a.id AS Source_ID, a.step_type AS source_type, LABEL(e) AS Edge, b.step_type AS target_type, b.id AS Target_ID
