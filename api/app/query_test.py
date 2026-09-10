@@ -10,8 +10,8 @@ def check_timeline():
     print("Querying....................")
 
     query = """
-        MATCH (p:State)-[:TRANSITIONED_TO]->(r:State) 
-        RETURN p.id AS Prompt_ID, p.step_type, r.step_type, r.id AS Response_ID
+        MATCH (a:State)-[e]->(b:State) 
+        RETURN a.id AS Source_ID, a.step_type AS source_type, LABEL(e) AS Edge, b.step_type AS target_type, b.id AS Target_ID
 """
 
     result = conn.execute(query)

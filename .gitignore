@@ -17,3 +17,6 @@ api/.pylogs/
 .env
 
 kuzu.db
+kuzu.db.wal
+
+api/app/query_test.py

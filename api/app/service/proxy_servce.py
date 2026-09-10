@@ -10,7 +10,8 @@ UPSTREAM_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/com
 
 async def stream_upstream_request(
         payload: dict,
-        headers: dict
+        headers: dict,
+        response_id: str,
 ) -> AsyncGenerator[bytes, None]:
     """
     Opens raw streaming pipeline to the upstream LLM provider
@@ -23,7 +24,6 @@ async def stream_upstream_request(
         "Content-Type": "application/json"
     }
 
-    response_id = str(uuid.uuid4())
     prompt_id = str(uuid.uuid4())
     conn.execute(
         "CREATE (s:State {id: $id, step_type: 'prompt', payload: $payload})",
