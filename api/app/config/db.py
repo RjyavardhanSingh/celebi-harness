@@ -42,4 +42,7 @@ def __init_db__():
     return conn
 
 
-__init_db__()
+try:
+    __init_db__()
+except Exception as e:
+    logger.error(f"Failed to initialize database: {e}")

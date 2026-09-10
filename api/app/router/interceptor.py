@@ -1,7 +1,7 @@
 import uuid
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import StreamingResponse
-from app.service.proxy_servce import stream_upstream_request
+from app.service.proxy_service import stream_upstream_request
 
 router = APIRouter()
 
@@ -12,7 +12,7 @@ async def intercept_chat_completions(
     try:
         payload = await request.json()
     except Exception:
-        raise HTTPException(status_code=404,detail="Invalid JSON body")
+        raise HTTPException(status_code=400,detail="Invalid JSON body")
     
     headers = dict(request.headers)
     response_id= str(uuid.uuid4())
