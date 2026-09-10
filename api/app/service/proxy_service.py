@@ -85,14 +85,17 @@ async def stream_upstream_request(
                 except RuntimeError as e:
                     logger.error(f"Failed to create response state: {e}")
 
-                conn.execute(
-                    """
-                    MATCH (p:State), (r:State) 
-                    WHERE p.id = $prompt_id AND r.id = $response_id
-                    CREATE (p)-[:TRANSITIONED_TO]->(r)
-                    """,
-                    {"prompt_id": prompt_id, "response_id": response_id}
-                )
+                try:
+                    conn.execute(
+                        """
+                        MATCH (p:State), (r:State) 
+                        WHERE p.id = $prompt_id AND r.id = $response_id
+                        CREATE (p)-[:TRANSITIONED_TO]->(r)
+                        """,
+                        {"prompt_id": prompt_id, "response_id": response_id}
+                    )
+                except RuntimeError as e:
+                    logger.error(f"Failed to create transition edge: {e}")
     except httpx.ConnectError as e:
          yield f'data: {{"error": "Upstream connection failed: {e}"}}\n\n'.encode('utf-8')
     except httpx.TimeoutException as e:

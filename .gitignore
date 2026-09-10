@@ -13,10 +13,15 @@ wheels/
 api/pylogs_hook.py
 api/pylogs.db
 api/.pylogs/
+api/pylogs.db-shm
+api/pylogs.db-wal
 
+#envs
 .env
 
+#kuzu db buildups
 kuzu.db
 kuzu.db.wal
 
-api/app/query_test.py
+#testing files
+app/query_test.py

@@ -45,4 +45,5 @@ def __init_db__():
 try:
     __init_db__()
 except Exception as e:
-    logger.error(f"Failed to initialize database: {e}")
+    logger.critical(f"Failed to initialize database: {e}")
+    raise
