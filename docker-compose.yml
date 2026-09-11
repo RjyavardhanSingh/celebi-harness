@@ -1,0 +1,25 @@
+# Celebi Server Mode — Docker Compose
+# Run: docker compose up --build
+# Then point any OpenAI-compatible tool at http://localhost:8000
+
+services:
+  celebi-proxy:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    ports:
+      - "${PROXY_PORT:-8000}:8000"
+      - "${LITELLM_PORT:-4000}:4000"
+    environment:
+      - CELEBI_MODEL=${CELEBI_MODEL:-gemini-3.5-flash-lite}
+      - CELEBI_LITELLM_MODEL=${CELEBI_LITELLM_MODEL:-gemini/gemini-3.5-flash-lite}
+      - CELEBI_ENV_KEY=${CELEBI_ENV_KEY:-GEMINI_KEY}
+      - GEMINI_KEY=${GEMINI_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - celebi-kuzu:/app/data
+    restart: unless-stopped
+
+volumes:
+  celebi-kuzu:

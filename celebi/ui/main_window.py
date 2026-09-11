@@ -1,0 +1,340 @@
+"""Main window — wizard first, then dashboard."""
+
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QHBoxLayout,
+    QStackedWidget, QMessageBox,
+)
+from PySide6.QtCore import Slot, Qt, QProcess
+from PySide6.QtGui import QAction
+
+from celebi.config import (
+    load_global, load_projects, get_project,
+    GlobalConfig, ProjectConfig,
+)
+from celebi.agents import generate_agent_config
+from celebi.ui.setup_wizard import SetupWizard
+from celebi.ui.projects_sidebar import ProjectsSidebar
+from celebi.ui.project_dashboard import ProjectDashboard
+from celebi.ui.settings_tab import SettingsTab
+
+API_DIR = Path(__file__).resolve().parent.parent.parent / "api"
+
+
+class MainWindow(QMainWindow):
+    """Celebi — wizard first, then dashboard."""
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Celebi — LLM Time Travel Harness")
+        self.setMinimumSize(1100, 700)
+
+        self._global_config = load_global()
+        self._current_project: ProjectConfig = None
+        self._processes: dict[str, dict] = {}
+
+        self._setup_ui()
+        self._connect_signals()
+
+        # Show wizard if no projects exist
+        if not load_projects():
+            self._show_wizard()
+        else:
+            self._show_dashboard()
+
+    def _setup_ui(self):
+        central = QWidget()
+        self.setCentralWidget(central)
+        self._root_layout = QHBoxLayout(central)
+        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setSpacing(0)
+
+        # Stack: wizard or dashboard
+        self._stack = QStackedWidget()
+
+        # Page 0: Setup wizard
+        self._wizard = SetupWizard()
+        self._stack.addWidget(self._wizard)
+
+        # Page 1: Dashboard (sidebar + content)
+        self._dashboard_page = self._build_dashboard_page()
+        self._stack.addWidget(self._dashboard_page)
+
+        self._root_layout.addWidget(self._stack)
+
+        # Menu
+        menu = self.menuBar()
+        file_menu = menu.addMenu("File")
+
+        self._add_project_action = QAction("Add Project", self)
+        self._add_project_action.setShortcut("Ctrl+N")
+        self._add_project_action.triggered.connect(self._show_wizard)
+        file_menu.addAction(self._add_project_action)
+
+        self._settings_action = QAction("Settings", self)
+        self._settings_action.triggered.connect(self._show_settings)
+        file_menu.addAction(self._settings_action)
+
+        file_menu.addSeparator()
+
+        quit_action = QAction("Quit", self)
+        quit_action.setShortcut("Ctrl+Q")
+        quit_action.triggered.connect(self.close)
+        file_menu.addAction(quit_action)
+
+        self.statusBar().showMessage("Ready")
+
+    def _build_dashboard_page(self) -> QWidget:
+        page = QWidget()
+        layout = QHBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Sidebar
+        self._sidebar = ProjectsSidebar()
+        layout.addWidget(self._sidebar)
+
+        # Dashboard
+        self._dashboard = ProjectDashboard()
+        layout.addWidget(self._dashboard, stretch=1)
+
+        return page
+
+    def _connect_signals(self):
+        # Wizard
+        self._wizard.finished.connect(self._on_wizard_finished)
+
+        # Sidebar
+        self._sidebar.project_selected.connect(self._on_project_selected)
+        self._sidebar.project_added.connect(self._on_project_added)
+        self._sidebar.project_removed.connect(self._on_project_removed)
+
+        # Dashboard
+        self._dashboard.start_requested.connect(self._on_start_project)
+        self._dashboard.stop_requested.connect(self._on_stop_project)
+        self._dashboard.open_folder_requested.connect(self._on_open_folder)
+
+    def _show_wizard(self):
+        self._stack.setCurrentWidget(self._wizard)
+
+    def _show_dashboard(self):
+        self._sidebar.refresh_list()
+        self._stack.setCurrentWidget(self._dashboard_page)
+
+    def _show_settings(self):
+        # Open settings in a simple dialog
+        from PySide6.QtWidgets import QDialog, QVBoxLayout, QPushButton
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Settings")
+        dlg.setMinimumWidth(450)
+        dlg_layout = QVBoxLayout(dlg)
+        settings = SettingsTab(self._global_config)
+        dlg_layout.addWidget(settings)
+        save_btn = QPushButton("Save")
+        save_btn.clicked.connect(lambda: (settings.save(), dlg.accept()))
+        dlg_layout.addWidget(save_btn)
+        dlg.exec()
+
+    @Slot()
+    def _on_wizard_finished(self):
+        self._global_config = self._wizard.get_global_config()
+        self._current_project = self._wizard.get_project()
+        self._show_dashboard()
+
+        # Generate agent config immediately
+        if self._current_project and self._global_config.model:
+            try:
+                config_path = generate_agent_config(
+                    self._current_project.agent,
+                    self._current_project.path,
+                    self._current_project.proxy_port,
+                    self._global_config.model,
+                )
+                self.statusBar().showMessage(
+                    f"Generated {config_path.name} in {self._current_project.path}",
+                    5000,
+                )
+            except Exception as e:
+                QMessageBox.warning(
+                    self, "Config Warning",
+                    f"Could not generate agent config:\n{e}",
+                )
+
+        # Auto-select the new project
+        if self._current_project:
+            self._dashboard.load_project(self._current_project)
+
+    @Slot(str)
+    def _on_project_selected(self, name: str):
+        project = get_project(name)
+        if project:
+            self._current_project = project
+            self._dashboard.load_project(project)
+            if name in self._processes:
+                self._dashboard.set_running()
+
+    @Slot(str)
+    def _on_project_added(self, name: str):
+        self.statusBar().showMessage(f"Project '{name}' added", 3000)
+
+    @Slot(str)
+    def _on_project_removed(self, name: str):
+        if name in self._processes:
+            self._kill_project_processes(name)
+            del self._processes[name]
+        self.statusBar().showMessage(f"Project '{name}' removed", 3000)
+
+    @Slot(str)
+    def _on_start_project(self, name: str):
+        project = get_project(name)
+        if not project:
+            return
+
+        if not self._global_config.api_key:
+            QMessageBox.warning(
+                self, "Missing Credentials",
+                "Set your API key first (File → Settings).",
+            )
+            return
+
+        # Generate agent config
+        try:
+            config_path = generate_agent_config(
+                project.agent,
+                project.path,
+                project.proxy_port,
+                self._global_config.model,
+            )
+            self.statusBar().showMessage(f"Generated {config_path.name}", 3000)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate config:\n{e}")
+            return
+
+        # Generate litellm config
+        litellm_config_path = Path.home() / ".celebi" / "litellm-config.yaml"
+        litellm_config_path.parent.mkdir(parents=True, exist_ok=True)
+        litellm_model = self._global_config.litellm_model_name()
+        env_key = self._global_config.env_key
+        litellm_config_path.write_text(
+            f"model_list:\n"
+            f"  - model_name: {self._global_config.model}\n"
+            f"    litellm_params:\n"
+            f"      model: {litellm_model}\n"
+            f"      api_key: os.environ/{env_key}\n"
+        )
+
+        self._dashboard.set_starting()
+
+        # Start LiteLLM
+        litellm_proc = QProcess(self)
+        litellm_proc.setProcessChannelMode(QProcess.MergedChannels)
+        litellm_proc.readyReadStandardOutput.connect(
+            lambda: self._on_process_output(name, litellm_proc, "LITELLM")
+        )
+
+        litellm_env = self._global_config.litellm_env()
+        process_env = litellm_proc.processEnvironment()
+        for k, v in litellm_env.items():
+            process_env.insert(k, v)
+        litellm_proc.setProcessEnvironment(process_env)
+
+        litellm_proc.setWorkingDirectory(str(API_DIR))
+        uv_bin = shutil.which("uv") or "uv"
+        litellm_proc.start(uv_bin, [
+            "run", "litellm",
+            "--config", str(litellm_config_path),
+            "--port", str(project.litellm_port),
+        ])
+
+        if not litellm_proc.waitForStarted(5000):
+            self._dashboard.set_error("Failed to start LiteLLM")
+            return
+
+        # Start FastAPI proxy
+        proxy_proc = QProcess(self)
+        proxy_proc.setProcessChannelMode(QProcess.MergedChannels)
+        proxy_proc.readyReadStandardOutput.connect(
+            lambda: self._on_process_output(name, proxy_proc, "PROXY")
+        )
+
+        proxy_env = proxy_proc.processEnvironment()
+        proxy_env.insert("CELEBI_UPSTREAM_PORT", str(project.litellm_port))
+        proxy_env.insert("CELEBI_PROXY_PORT", str(project.proxy_port))
+        proxy_proc.setProcessEnvironment(proxy_env)
+
+        proxy_proc.setWorkingDirectory(str(API_DIR))
+        proxy_proc.start(sys.executable, [
+            "-m", "uvicorn",
+            "main:app",
+            "--host", "127.0.0.1",
+            "--port", str(project.proxy_port),
+        ])
+
+        if not proxy_proc.waitForStarted(5000):
+            litellm_proc.kill()
+            self._dashboard.set_error("Failed to start proxy")
+            return
+
+        self._processes[name] = {
+            "proxy": proxy_proc,
+            "litellm": litellm_proc,
+        }
+
+        self._dashboard.set_running()
+        self.statusBar().showMessage(
+            f"Running on :{project.proxy_port}", 5000
+        )
+
+    @Slot(str)
+    def _on_stop_project(self, name: str):
+        self._kill_project_processes(name)
+        self._dashboard.set_stopped()
+        self.statusBar().showMessage(f"Stopped", 3000)
+
+    @Slot(str)
+    def _on_open_folder(self, path: str):
+        subprocess.Popen(["xdg-open", path])
+
+    def _kill_project_processes(self, name: str):
+        if name in self._processes:
+            procs = self._processes[name]
+            for key in ["proxy", "litellm"]:
+                proc = procs.get(key)
+                if proc and proc.state() == QProcess.Running:
+                    proc.kill()
+                    proc.waitForFinished(3000)
+
+    @Slot(object, str)
+    def _on_process_output(self, project_name: str, process: QProcess, source: str):
+        data = process.readAllStandardOutput().data().decode("utf-8", errors="replace")
+        for line in data.strip().split("\n"):
+            if line:
+                self._dashboard.add_log(line, source)
+
+    def closeEvent(self, event):
+        running = [n for n, p in self._processes.items() if self._is_running(n)]
+        if running:
+            reply = QMessageBox.question(
+                self, "Quit Celebi?",
+                f"Projects running: {', '.join(running)}.\nStop and quit?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply == QMessageBox.StandardButton.No:
+                event.ignore()
+                return
+
+        for name in list(self._processes.keys()):
+            self._kill_project_processes(name)
+        event.accept()
+
+    def _is_running(self, name: str) -> bool:
+        if name not in self._processes:
+            return False
+        return any(
+            p and p.state() == QProcess.Running
+            for p in self._processes[name].values()
+        )
