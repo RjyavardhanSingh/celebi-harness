@@ -6,8 +6,9 @@ import uuid
 from typing import AsyncGenerator
 
 from app.config.db import conn
+from app.config.api_config import api_config
 
-UPSTREAM_URL = "http://localhost:4000/v1/chat/completions" 
+UPSTREAM_URL = api_config.upstream_url
 logger = logging.getLogger(__name__)
 
 async def stream_upstream_request(
