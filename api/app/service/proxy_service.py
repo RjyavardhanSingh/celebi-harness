@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 
 from app.config.db import conn
 
-UPSTREAM_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+UPSTREAM_URL = "http://localhost:4000/v1/chat/completions" 
 logger = logging.getLogger(__name__)
 
 async def stream_upstream_request(
@@ -64,7 +64,7 @@ async def stream_upstream_request(
                 
                 if upstream_response.status_code != 200:
                     error_body = await upstream_response.aread()
-                    error_msg = f"data: {{\"error\": \"Upstream Gemini Error {upstream_response.status_code}: {error_body.decode('utf-8')}\"}}\n\n"
+                    error_msg = f"data: {{\"error\": \"Upstream Error {upstream_response.status_code}: {error_body.decode('utf-8')}\"}}\n\n"
                     yield error_msg.encode('utf-8')
                     return
 
