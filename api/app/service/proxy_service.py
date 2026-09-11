@@ -7,7 +7,7 @@ from typing import AsyncGenerator
 
 from app.config.db import conn
 
-UPSTREAM_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+UPSTREAM_URL = "http://localhost:4000/v1/chat/completions" 
 logger = logging.getLogger(__name__)
 
 async def stream_upstream_request(
