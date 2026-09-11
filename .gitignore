@@ -29,3 +29,6 @@ app/query_test.py
 #local vscode settings
 settings.json
 .vscode
+
+#agent json
+opencode.json
