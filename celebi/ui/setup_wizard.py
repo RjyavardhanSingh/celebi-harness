@@ -14,29 +14,7 @@ from celebi.config import (
     GlobalConfig, save_global, add_project, load_projects, ProjectConfig,
 )
 from celebi.agents import get_agent_names, get_agent_display_name
-from celebi.model_fetcher import fetch_models
-
-import asyncio
-from PySide6.QtCore import QThread
-
-
-class ModelFetchWorker(QThread):
-    finished = Signal(list)
-    error = Signal(str)
-
-    def __init__(self, provider, api_key, parent=None):
-        super().__init__(parent)
-        self.provider = provider
-        self.api_key = api_key
-
-    def run(self):
-        try:
-            loop = asyncio.new_event_loop()
-            models = loop.run_until_complete(fetch_models(self.provider, self.api_key))
-            loop.close()
-            self.finished.emit(models)
-        except Exception as e:
-            self.error.emit(str(e))
+from celebi.workers import ModelFetchWorker
 
 
 class SetupWizard(QWidget):

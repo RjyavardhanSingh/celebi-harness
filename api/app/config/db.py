@@ -22,18 +22,21 @@ def __init_db__():
 
     try:
         conn.execute("CREATE NODE TABLE State(id STRING, step_type STRING, payload STRING, PRIMARY KEY (id))") #
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        if "already exists" not in str(e):
+            logger.warning("Failed to create State table: %s", e)
     try:   
         # Create the directional relationship table
         conn.execute("CREATE REL TABLE TRANSITIONED_TO(FROM State TO State)") #
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        if "already exists" not in str(e):
+            logger.warning("Failed to create TRANSITIONED_TO table: %s", e)
     try:
         #the branching relationship
         conn.execute("CREATE REL TABLE BRANCHED_TO(FROM State TO State)")
-    except RuntimeError:
-        pass
+    except RuntimeError as e:
+        if "already exists" not in str(e):
+            logger.warning("Failed to create BRANCHED_TO table: %s", e)
         
         
     logger.info("Celebi timeline initialized successfully.")

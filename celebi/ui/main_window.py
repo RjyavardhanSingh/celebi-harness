@@ -1,5 +1,6 @@
 """Main window — wizard first, then dashboard."""
 
+import platform
 import shutil
 import subprocess
 import sys
@@ -194,6 +195,10 @@ class MainWindow(QMainWindow):
         if not project:
             return
 
+        if self._is_running(name):
+            self.statusBar().showMessage("Already running", 3000)
+            return
+
         if not self._global_config.api_key:
             QMessageBox.warning(
                 self, "Missing Credentials",
@@ -297,7 +302,13 @@ class MainWindow(QMainWindow):
 
     @Slot(str)
     def _on_open_folder(self, path: str):
-        subprocess.Popen(["xdg-open", path])
+        system = platform.system()
+        if system == "Darwin":
+            subprocess.Popen(["open", path])
+        elif system == "Windows":
+            subprocess.Popen(["start", path], shell=True)
+        else:
+            subprocess.Popen(["xdg-open", path])
 
     def _kill_project_processes(self, name: str):
         if name in self._processes:

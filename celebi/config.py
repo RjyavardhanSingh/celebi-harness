@@ -6,10 +6,13 @@ Two-level config:
 """
 
 import json
+import logging
 import os
 from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path.home() / ".celebi"
 GLOBAL_FILE = CONFIG_DIR / "global.json"
@@ -58,8 +61,9 @@ class GlobalConfig:
 
     def litellm_env(self) -> dict:
         env = os.environ.copy()
-        if self.api_key:
-            env[self.env_key] = self.api_key
+        if not self.api_key:
+            logger.warning("No API key set for provider %s", self.provider)
+        env[self.env_key] = self.api_key
         return env
 
 
@@ -92,15 +96,18 @@ def load_global() -> GlobalConfig:
                 k: v for k, v in data.items()
                 if k in GlobalConfig.__dataclass_fields__
             })
-        except (json.JSONDecodeError, TypeError):
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning("Corrupted %s, resetting to defaults: %s", GLOBAL_FILE, e)
     return GlobalConfig()
 
 
 def save_global(config: GlobalConfig) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(GLOBAL_FILE, "w") as f:
-        json.dump(asdict(config), f, indent=2)
+    try:
+        with open(GLOBAL_FILE, "w") as f:
+            json.dump(asdict(config), f, indent=2)
+    except (OSError, TypeError) as e:
+        logger.error("Failed to save %s: %s", GLOBAL_FILE, e)
 
 
 def load_projects() -> List[ProjectConfig]:
@@ -109,15 +116,18 @@ def load_projects() -> List[ProjectConfig]:
             with open(PROJECTS_FILE) as f:
                 data = json.load(f)
             return [ProjectConfig(**p) for p in data]
-        except (json.JSONDecodeError, TypeError):
-            pass
+        except (json.JSONDecodeError, TypeError) as e:
+            logger.warning("Corrupted %s, resetting to empty: %s", PROJECTS_FILE, e)
     return []
 
 
 def save_projects(projects: List[ProjectConfig]) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(PROJECTS_FILE, "w") as f:
-        json.dump([asdict(p) for p in projects], f, indent=2)
+    try:
+        with open(PROJECTS_FILE, "w") as f:
+            json.dump([asdict(p) for p in projects], f, indent=2)
+    except (OSError, TypeError) as e:
+        logger.error("Failed to save %s: %s", PROJECTS_FILE, e)
 
 
 def next_port(projects: List[ProjectConfig]) -> tuple:

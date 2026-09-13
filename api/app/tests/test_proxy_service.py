@@ -93,7 +93,7 @@ async def test_branching_creates_branched_to_edge(mock_client_cls, mock_conn):
 @pytest.mark.anyio
 @patch("app.service.proxy_service.conn")
 @patch("app.service.proxy_service.httpx.AsyncClient")
-async def test_gemini_faliure(mock_client_cls, mock_conn):
+async def test_gemini_failure(mock_client_cls, mock_conn):
     mock_response = MockStreamResponse(chunks=[b'data'], status_code=500, body=b'{"error": internal}')
 
     mock_stream_ctx = MagicMock()
@@ -124,7 +124,7 @@ async def test_gemini_faliure(mock_client_cls, mock_conn):
 @pytest.mark.anyio
 @patch("app.service.proxy_service.conn")
 @patch("app.service.proxy_service.httpx.AsyncClient")
-async def test_connection_faliure(mock_client_cls, mock_conn):
+async def test_connection_failure(mock_client_cls, mock_conn):
     mock_client = MagicMock()
     mock_client.stream.side_effect = httpx.ConnectError("connection refused")
 

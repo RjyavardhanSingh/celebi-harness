@@ -5,9 +5,12 @@ No hardcoded models — everything comes from the user's config.
 """
 
 import json
+import logging
 import os
 from pathlib import Path
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path.home() / ".celebi"
 GLOBAL_FILE = CONFIG_DIR / "global.json"
@@ -19,6 +22,8 @@ PROVIDER_PREFIXES = {
     "deepseek": "deepseek/",
     "groq": "groq/",
     "mistral": "mistral/",
+    "cohere": "cohere/",
+    "bedrock": "bedrock/",
 }
 
 
@@ -50,10 +55,13 @@ def load_api_config() -> APIConfig:
     proxy_port = os.environ.get("CELEBI_PROXY_PORT")
 
     if upstream_port and proxy_port:
-        return APIConfig(
-            upstream_port=int(upstream_port),
-            proxy_port=int(proxy_port),
-        )
+        try:
+            return APIConfig(
+                upstream_port=int(upstream_port),
+                proxy_port=int(proxy_port),
+            )
+        except ValueError as e:
+            logger.warning("Invalid port env vars: %s", e)
 
     if GLOBAL_FILE.exists():
         try:
@@ -64,8 +72,8 @@ def load_api_config() -> APIConfig:
                 model=data.get("model", ""),
                 api_key=data.get("api_key", ""),
             )
-        except (json.JSONDecodeError, KeyError):
-            pass
+        except (json.JSONDecodeError, KeyError) as e:
+            logger.warning("Corrupted %s: %s", GLOBAL_FILE, e)
 
     return APIConfig()
 

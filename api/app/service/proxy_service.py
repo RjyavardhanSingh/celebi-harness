@@ -70,18 +70,18 @@ async def stream_upstream_request(
                     return
 
                 try:
-                    accumalated_response = ""
+                    accumulated_response = ""
 
                     #For sendind data byte by byte aiter)bytes is used
                     async for raw_chunk in upstream_response.aiter_bytes():
                         if raw_chunk:
-                            accumalated_response += raw_chunk.decode('utf-8', errors='ignore')
+                            accumulated_response += raw_chunk.decode('utf-8', errors='ignore')
                             yield raw_chunk
 
 
                     conn.execute(
                         "CREATE (s:State {id: $id, step_type: 'response', payload: $payload})",
-                        {"id": response_id, "payload": accumalated_response}
+                        {"id": response_id, "payload": accumulated_response}
                     )
                 except RuntimeError as e:
                     logger.error(f"Failed to create response state: {e}")

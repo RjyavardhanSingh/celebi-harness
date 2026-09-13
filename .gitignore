@@ -24,11 +24,10 @@ kuzu.db
 kuzu.db.wal
 
 #testing files
-app/query_test.py
+api/app/query_test.py
 
 #local vscode settings
-settings.json
-.vscode
+.vscode/
 
 #agent json
 opencode.json

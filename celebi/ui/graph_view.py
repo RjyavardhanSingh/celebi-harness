@@ -5,13 +5,14 @@ from PySide6.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsRectItem,
     QGraphicsTextItem, QGraphicsItem, QGraphicsPolygonItem,
     QGraphicsPathItem,
+    QHBoxLayout,
     QDialog, QVBoxLayout, QTextEdit, QPushButton, QLabel,
-    QGraphicsSimpleTextItem,
+    QGraphicsSimpleTextItem, QFileDialog,
 )
 from PySide6.QtCore import Qt, QRectF, QPointF
 from PySide6.QtGui import (
     QPen, QBrush, QColor, QFont, QPainter, QPainterPath,
-    QPolygonF,
+    QPolygonF, QImage,
 )
 
 
@@ -93,7 +94,7 @@ class ConversationCard(QGraphicsRectItem):
                         text = text.replace("\n", " ").strip()
                         return text[:70] + "..." if len(text) > 70 else text
                 return "(no user message)"
-            except:
+            except (json.JSONDecodeError, TypeError, AttributeError):
                 return self.payload[:70]
         else:
             parts = []
@@ -106,7 +107,7 @@ class ConversationCard(QGraphicsRectItem):
                     content = d.get("choices", [{}])[0].get("delta", {}).get("content", "")
                     if content:
                         parts.append(content)
-                except:
+                except (json.JSONDecodeError, IndexError, AttributeError):
                     pass
             full = "".join(parts).replace("\n", " ").strip()
             if full:
@@ -177,8 +178,13 @@ class ConversationArrow(QGraphicsPathItem):
 
 
 class NodeDetailDialog(QDialog):
-    def __init__(self, node_id, step_type, payload, parent=None):
+    def __init__(self, node_id, step_type, payload, parent=None, proxy_url=None):
         super().__init__(parent)
+        self.node_id = node_id
+        self.step_type = step_type
+        self.payload = payload
+        self.proxy_url = proxy_url
+
         self.setWindowTitle(f"{step_type.upper()} — {node_id[:12]}..")
         self.setMinimumSize(600, 450)
 
@@ -207,9 +213,43 @@ class NodeDetailDialog(QDialog):
         )
         layout.addWidget(text_edit)
 
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        if step_type == "prompt" and self.proxy_url:
+            replay_btn = QPushButton("Replay (Branch)")
+            replay_btn.setStyleSheet(
+                "QPushButton { background-color: #FF9800; color: white; font-weight: bold; border-radius: 4px; padding: 8px 16px; }"
+                "QPushButton:hover { background-color: #F57C00; }"
+            )
+            replay_btn.clicked.connect(self._on_replay)
+            btn_layout.addWidget(replay_btn)
+
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.close)
-        layout.addWidget(close_btn)
+        btn_layout.addWidget(close_btn)
+
+        layout.addLayout(btn_layout)
+
+    def _on_replay(self):
+        """Replay this prompt as a new branch."""
+        import httpx as _httpx
+        try:
+            resp = _httpx.post(
+                f"{self.proxy_url}/v1/chat/completions",
+                json=json.loads(self.payload),
+                headers={"X-Celebi-Parent-Id": self.node_id},
+                timeout=60.0,
+            )
+            if resp.status_code == 200:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.information(self, "Replay Sent", "Branch created. Refresh graph to see it.")
+            else:
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Replay Failed", f"Status {resp.status_code}")
+        except Exception as e:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Replay Error", str(e))
 
     def _format_prompt(self, payload):
         """Extract only the last user message."""
@@ -220,7 +260,7 @@ class NodeDetailDialog(QDialog):
                 if msg.get("role") == "user":
                     return msg.get("content", "")
             return "(no user message)"
-        except:
+        except (json.JSONDecodeError, TypeError, AttributeError):
             return payload
 
     def _format_response(self, payload):
@@ -240,7 +280,7 @@ class NodeDetailDialog(QDialog):
                     pt = usage.get("prompt_tokens", 0)
                     ct = usage.get("completion_tokens", 0)
                     tokens = f"{pt} prompt + {ct} completion = {pt + ct} total"
-            except:
+            except (json.JSONDecodeError, IndexError, AttributeError):
                 pass
         return "".join(parts) or "(no text)", tokens
 
@@ -253,12 +293,14 @@ class GraphView(QGraphicsView):
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self._proxy_url = None
 
     def clear(self):
         self._scene.clear()
 
     def load_graph(self, edges: list, proxy_port: int):
         self.clear()
+        self._proxy_url = f"http://localhost:{proxy_port}"
         if not edges:
             return
 
@@ -304,9 +346,13 @@ class GraphView(QGraphicsView):
 
     def mousePressEvent(self, event):
         item = self.itemAt(event.position().toPoint())
+        # Walk up parent chain — clicking on child text items returns them, not the card
+        while item and not isinstance(item, ConversationCard):
+            item = item.parentItem()
         if isinstance(item, ConversationCard):
             dialog = NodeDetailDialog(
-                item.node_id, item.step_type, item.payload, self.window()
+                item.node_id, item.step_type, item.payload, self.window(),
+                proxy_url=self._proxy_url,
             )
             dialog.exec()
         super().mousePressEvent(event)
@@ -314,3 +360,25 @@ class GraphView(QGraphicsView):
     def wheelEvent(self, event):
         factor = 1.2 if event.angleDelta().y() > 0 else 1 / 1.2
         self.scale(factor, factor)
+
+    def export_to_png(self, parent=None) -> bool:
+        """Export the current graph view to a PNG file. Returns True if saved."""
+        rect = self._scene.sceneRect()
+        if rect.isEmpty():
+            return False
+
+        image = QImage(int(rect.width() + 80), int(rect.height() + 80), QImage.Format.Format_ARGB32)
+        image.fill(QColor("#1e1e1e"))
+
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._scene.render(painter, QRectF(image.rect()), rect.adjusted(-40, -40, 40, 40))
+        painter.end()
+
+        path, _ = QFileDialog.getSaveFileName(
+            parent, "Export Graph as PNG", "celebi-graph.png", "PNG Files (*.png)"
+        )
+        if not path:
+            return False
+
+        return image.save(path, "PNG")
