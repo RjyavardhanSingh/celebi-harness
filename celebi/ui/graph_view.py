@@ -223,6 +223,7 @@ class NodeDetailDialog(QDialog):
                 "QPushButton:hover { background-color: #F57C00; }"
             )
             replay_btn.clicked.connect(self._on_replay)
+            self._replay_btn = replay_btn
             btn_layout.addWidget(replay_btn)
 
         close_btn = QPushButton("Close")
@@ -232,24 +233,71 @@ class NodeDetailDialog(QDialog):
         layout.addLayout(btn_layout)
 
     def _on_replay(self):
-        """Replay this prompt as a new branch."""
+        """Replay this prompt — call litellm directly, then log to DB via proxy."""
+        self._replay_btn.setEnabled(False)
         import httpx as _httpx
+        import uuid as _uuid
+
         try:
+            payload = json.loads(self.payload)
+
+            # Find litellm port from the proxy URL (proxy_url = http://localhost:8000)
+            proxy_port = int(self.proxy_url.rsplit(":", 1)[1])
+            litellm_port = proxy_port - 4000  # litellm is always 4000, proxy is 8000+
+
+            # Derive the litellm model name with provider prefix
+            from celebi.config import GlobalConfig, load_global
+            cfg = load_global()
+            litellm_model = cfg.litellm_model_name()
+            payload["model"] = litellm_model
+
+            # 1. Call litellm DIRECTLY — bypasses proxy, avoids double-logging
+            env_key = cfg.env_key
+            import os
+            api_key = os.environ.get(env_key, cfg.api_key)
+
+            litellm_url = f"http://127.0.0.1:4000/v1/chat/completions"
             resp = _httpx.post(
-                f"{self.proxy_url}/v1/chat/completions",
-                json=json.loads(self.payload),
-                headers={"X-Celebi-Parent-Id": self.node_id},
+                litellm_url,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                },
                 timeout=60.0,
             )
-            if resp.status_code == 200:
+
+            if resp.status_code != 200:
                 from PySide6.QtWidgets import QMessageBox
-                QMessageBox.information(self, "Replay Sent", "Branch created. Refresh graph to see it.")
-            else:
-                from PySide6.QtWidgets import QMessageBox
-                QMessageBox.warning(self, "Replay Failed", f"Status {resp.status_code}")
+                QMessageBox.warning(self, "Replay Failed", f"LiteLLM returned {resp.status_code}")
+                self._replay_btn.setEnabled(True)
+                return
+
+            response_text = resp.text
+
+            # 2. Log to DB via proxy's /v1/replay endpoint
+            prompt_id = str(_uuid.uuid4())
+            response_id = str(_uuid.uuid4())
+
+            _httpx.post(
+                f"{self.proxy_url}/v1/replay",
+                json={
+                    "prompt_id": prompt_id,
+                    "response_id": response_id,
+                    "parent_id": self.node_id,
+                    "prompt_payload": payload,
+                    "response_payload": response_text,
+                },
+                timeout=10.0,
+            )
+
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.information(self, "Replay Sent", "Branch created. Refresh graph to see it.")
+
         except Exception as e:
             from PySide6.QtWidgets import QMessageBox
             QMessageBox.critical(self, "Replay Error", str(e))
+            self._replay_btn.setEnabled(True)
 
     def _format_prompt(self, payload):
         """Extract only the last user message."""

@@ -136,9 +136,46 @@ class MainWindow(QMainWindow):
         settings = SettingsTab(self._global_config)
         dlg_layout.addWidget(settings)
         save_btn = QPushButton("Save")
-        save_btn.clicked.connect(lambda: (settings.save(), dlg.accept()))
+        save_btn.clicked.connect(lambda: self._on_settings_saved(settings, dlg))
         dlg_layout.addWidget(save_btn)
         dlg.exec()
+
+    def _on_settings_saved(self, settings, dlg):
+        config = settings.save()
+        self._global_config = config
+
+        if not config.model:
+            dlg.accept()
+            return
+
+        errors = []
+
+        # Regenerate agent config for current project if one is selected
+        if self._current_project:
+            try:
+                generate_agent_config(
+                    self._current_project.agent,
+                    self._current_project.path,
+                    self._current_project.proxy_port,
+                    config.model,
+                )
+            except Exception as e:
+                errors.append(f"Project config: {e}")
+
+        # Also update the root-level opencode.json so OpenCode picks up the change
+        try:
+            from celebi.agents import write_opencode_config
+            celebi_root = Path(__file__).resolve().parent.parent.parent
+            write_opencode_config(str(celebi_root), 8000, config.model)
+        except Exception as e:
+            errors.append(f"Root config: {e}")
+
+        if errors:
+            self.statusBar().showMessage(f"Saved with errors: {'; '.join(errors)}", 5000)
+        else:
+            self.statusBar().showMessage("Settings saved — restart OpenCode to apply", 3000)
+
+        dlg.accept()
 
     @Slot()
     def _on_wizard_finished(self):
@@ -205,6 +242,10 @@ class MainWindow(QMainWindow):
                 "Set your API key first (File → Settings).",
             )
             return
+
+        # Kill any stale processes on our ports
+        self._kill_port(project.litellm_port)
+        self._kill_port(project.proxy_port)
 
         # Generate agent config
         try:
@@ -318,6 +359,16 @@ class MainWindow(QMainWindow):
                 if proc and proc.state() == QProcess.Running:
                     proc.kill()
                     proc.waitForFinished(3000)
+
+    def _kill_port(self, port: int):
+        """Kill any process holding the given port."""
+        try:
+            subprocess.run(
+                ["fuser", "-k", f"{port}/tcp"],
+                capture_output=True, timeout=5,
+            )
+        except Exception:
+            pass
 
     @Slot(object, str)
     def _on_process_output(self, project_name: str, process: QProcess, source: str):

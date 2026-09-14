@@ -65,8 +65,15 @@ async def stream_upstream_request(
                 
                 if upstream_response.status_code != 200:
                     error_body = await upstream_response.aread()
-                    error_msg = f"data: {{\"error\": \"Upstream Error {upstream_response.status_code}: {error_body.decode('utf-8')}\"}}\n\n"
-                    yield error_msg.encode('utf-8')
+                    error_text = error_body.decode("utf-8", errors="replace")
+                    error_payload = json.dumps({
+                        "error": {
+                            "message": f"Upstream Error {upstream_response.status_code}: {error_text}",
+                            "type": "upstream_error",
+                            "code": upstream_response.status_code,
+                        }
+                    })
+                    yield f"data: {error_payload}\n\n".encode("utf-8")
                     return
 
                 try:
@@ -98,7 +105,8 @@ async def stream_upstream_request(
                 except RuntimeError as e:
                     logger.error(f"Failed to create transition edge: {e}")
     except httpx.ConnectError as e:
-         yield f'data: {{"error": "Upstream connection failed: {e}"}}\n\n'.encode('utf-8')
+         error_payload = json.dumps({"error": {"message": f"Upstream connection failed: {e}", "type": "connection_error", "code": 502}})
+         yield f"data: {error_payload}\n\n".encode("utf-8")
     except httpx.TimeoutException as e:
-         yield b'data: {"error": "Upstream timeout"}\n\n'
-    
+         error_payload = json.dumps({"error": {"message": "Upstream timeout", "type": "timeout_error", "code": 504}})
+         yield f"data: {error_payload}\n\n".encode("utf-8")
