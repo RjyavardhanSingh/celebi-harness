@@ -443,6 +443,9 @@ class ProjectDashboard(QWidget):
         per_request = data.get("per_request", [])
         self._chart.removeAllSeries()
 
+        for axis in self._chart.axes():
+            self._chart.removeAxis(axis)
+
         if not per_request:
             return
 
