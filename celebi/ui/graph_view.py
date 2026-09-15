@@ -1,4 +1,4 @@
-"""Graph visualization — card-based layout with prompt/response pairs."""
+"""Graph visualization — card-based layout with prompt/response pairs. Grren for prompt nodes Blue for response nodes"""
 
 import json
 from PySide6.QtWidgets import (
