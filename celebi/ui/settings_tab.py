@@ -1,13 +1,21 @@
 """Global settings tab — provider, API key, model dropdown.
 
-Flow: User selects provider → enters API key → models fetched → select from dropdown.
+Deprecated: Credentials form duplicated in setup_wizard.py.
+Consider extracting a shared CredentialsFormWidget class.
 """
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
-    QLineEdit, QComboBox, QLabel, QGroupBox, QPushButton,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal, Qt
 
 from celebi.config import GlobalConfig, save_global
 from celebi.workers import ModelFetchWorker
@@ -36,7 +44,6 @@ class SettingsTab(QWidget):
         self._provider_combo = QComboBox()
         self._provider_combo.addItems(["gemini", "openai", "anthropic"])
         self._provider_combo.setEditable(True)
-        self._provider_combo.currentTextChanged.connect(self._on_provider_changed)
         form.addRow("Provider:", self._provider_combo)
 
         # API key
@@ -99,9 +106,6 @@ class SettingsTab(QWidget):
         # Set model
         if self._config.model:
             self._model_combo.setEditText(self._config.model)
-
-    def _on_provider_changed(self, text):
-        pass  # User needs to click Fetch Models
 
     def _on_fetch_models(self):
         provider = self._provider_combo.currentText().strip()

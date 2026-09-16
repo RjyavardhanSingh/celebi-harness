@@ -31,3 +31,11 @@ api/app/query_test.py
 
 #agent json
 opencode.json
+
+# Build artifacts
+dist/
+build/
+*.spec
+
+# Environment files
+.env

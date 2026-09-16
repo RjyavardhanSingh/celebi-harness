@@ -1,0 +1,48 @@
+# Docker Compose for Contributors
+# Backend services run in Docker, GUI runs locally.
+#
+# Usage:
+#   docker compose -f docker-compose.dev.yml up              # Start backend
+#   docker compose -f docker-compose.dev.yml --profile lint run celebi-lint   # Lint
+#   docker compose -f docker-compose.dev.yml --profile test run celebi-test   # Test
+
+services:
+  celebi-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${PROXY_PORT:-8000}:8000"
+      - "${LITELLM_PORT:-4000}:4000"
+    environment:
+      - CELEBI_MODEL=${CELEBI_MODEL:-gemini-3.5-flash-lite}
+      - CELEBI_LITELLM_MODEL=${CELEBI_LITELLM_MODEL:-gemini/gemini-3.5-flash-lite}
+      - CELEBI_ENV_KEY=${CELEBI_ENV_KEY:-GEMINI_KEY}
+      - GEMINI_KEY=${GEMINI_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+    volumes:
+      - .:/app
+      - celebi-kuzu:/app/api/kuzu.db
+    restart: unless-stopped
+
+  celebi-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+    entrypoint: ["sh", "-c", "ruff check . && ruff format --check ."]
+    profiles: ["lint"]
+
+  celebi-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+    entrypoint: ["sh", "-c", "cd api && python -m pytest app/tests/ -v"]
+    profiles: ["test"]
+
+volumes:
+  celebi-kuzu:

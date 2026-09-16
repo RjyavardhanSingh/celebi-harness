@@ -1,20 +1,40 @@
-"""Graph visualization — card-based layout with prompt/response pairs. Grren for prompt nodes Blue for response nodes"""
+"""Graph visualization — card-based layout with prompt/response pairs.
+
+Green for prompt nodes, Blue for response nodes.
+"""
 
 import json
-from PySide6.QtWidgets import (
-    QGraphicsView, QGraphicsScene, QGraphicsRectItem,
-    QGraphicsTextItem, QGraphicsItem, QGraphicsPolygonItem,
-    QGraphicsPathItem,
-    QHBoxLayout,
-    QDialog, QVBoxLayout, QTextEdit, QPushButton, QLabel,
-    QGraphicsSimpleTextItem, QFileDialog,
-)
-from PySide6.QtCore import Qt, QRectF, QPointF
-from PySide6.QtGui import (
-    QPen, QBrush, QColor, QFont, QPainter, QPainterPath,
-    QPolygonF, QImage,
-)
+import os
+import uuid
 
+import httpx
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QImage,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPolygonF,
+)
+from PySide6.QtWidgets import (
+    QDialog,
+    QFileDialog,
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsRectItem,
+    QGraphicsScene,
+    QGraphicsSimpleTextItem,
+    QGraphicsView,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+)
 
 PROMPT_BG = QColor("#1a3a4a")
 RESPONSE_BG = QColor("#1a3a2a")
@@ -235,29 +255,23 @@ class NodeDetailDialog(QDialog):
     def _on_replay(self):
         """Replay this prompt — call litellm directly, then log to DB via proxy."""
         self._replay_btn.setEnabled(False)
-        import httpx as _httpx
-        import uuid as _uuid
 
         try:
             payload = json.loads(self.payload)
 
-            # Find litellm port from the proxy URL (proxy_url = http://localhost:8000)
-            proxy_port = int(self.proxy_url.rsplit(":", 1)[1])
-            litellm_port = proxy_port - 4000  # litellm is always 4000, proxy is 8000+
-
             # Derive the litellm model name with provider prefix
-            from celebi.config import GlobalConfig, load_global
+            from celebi.config import load_global
+
             cfg = load_global()
             litellm_model = cfg.litellm_model_name()
             payload["model"] = litellm_model
 
             # 1. Call litellm DIRECTLY — bypasses proxy, avoids double-logging
             env_key = cfg.env_key
-            import os
             api_key = os.environ.get(env_key, cfg.api_key)
 
-            litellm_url = f"http://127.0.0.1:4000/v1/chat/completions"
-            resp = _httpx.post(
+            litellm_url = "http://127.0.0.1:4000/v1/chat/completions"
+            resp = httpx.post(
                 litellm_url,
                 json=payload,
                 headers={
@@ -268,7 +282,6 @@ class NodeDetailDialog(QDialog):
             )
 
             if resp.status_code != 200:
-                from PySide6.QtWidgets import QMessageBox
                 QMessageBox.warning(self, "Replay Failed", f"LiteLLM returned {resp.status_code}")
                 self._replay_btn.setEnabled(True)
                 return
@@ -276,10 +289,10 @@ class NodeDetailDialog(QDialog):
             response_text = resp.text
 
             # 2. Log to DB via proxy's /v1/replay endpoint
-            prompt_id = str(_uuid.uuid4())
-            response_id = str(_uuid.uuid4())
+            prompt_id = str(uuid.uuid4())
+            response_id = str(uuid.uuid4())
 
-            _httpx.post(
+            httpx.post(
                 f"{self.proxy_url}/v1/replay",
                 json={
                     "prompt_id": prompt_id,
@@ -291,11 +304,9 @@ class NodeDetailDialog(QDialog):
                 timeout=10.0,
             )
 
-            from PySide6.QtWidgets import QMessageBox
             QMessageBox.information(self, "Replay Sent", "Branch created. Refresh graph to see it.")
 
         except Exception as e:
-            from PySide6.QtWidgets import QMessageBox
             QMessageBox.critical(self, "Replay Error", str(e))
             self._replay_btn.setEnabled(True)
 
@@ -369,8 +380,11 @@ class GraphView(QGraphicsView):
             self._scene.addItem(prompt_card)
 
             resp_card = ConversationCard(
-                e["target_id"], "response", e.get("target_payload", ""),
-                card_w + gap, y,
+                e["target_id"],
+                "response",
+                e.get("target_payload", ""),
+                card_w + gap,
+                y,
             )
             self._scene.addItem(resp_card)
 
@@ -399,7 +413,10 @@ class GraphView(QGraphicsView):
             item = item.parentItem()
         if isinstance(item, ConversationCard):
             dialog = NodeDetailDialog(
-                item.node_id, item.step_type, item.payload, self.window(),
+                item.node_id,
+                item.step_type,
+                item.payload,
+                self.window(),
                 proxy_url=self._proxy_url,
             )
             dialog.exec()

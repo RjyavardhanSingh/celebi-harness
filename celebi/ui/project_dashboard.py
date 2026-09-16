@@ -1,19 +1,27 @@
 """Project dashboard — controls, graph, and logs for a single project."""
 
+import json
 from datetime import datetime
 
 import httpx
+from PySide6.QtCharts import QBarCategoryAxis, QBarSeries, QBarSet, QChart, QChartView, QValueAxis
+from PySide6.QtCore import Qt, QThread, Signal, Slot
+from PySide6.QtGui import QColor, QFont, QPainter, QTextCharFormat
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
-    QPushButton, QLabel, QFrame, QTextEdit,
-    QTabWidget, QLineEdit, QListWidget, QListWidgetItem,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QTabWidget,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal, Slot, Qt, QThread
-from PySide6.QtGui import QTextCharFormat, QColor, QFont, QPainter
-from PySide6.QtCharts import QChart, QChartView, QBarSeries, QBarSet, QBarCategoryAxis, QValueAxis
 
-from celebi.config import ProjectConfig, GlobalConfig
 from celebi.agents import get_agent_display_name
+from celebi.config import ProjectConfig
 
 
 class StatusIndicator(QLabel):
@@ -36,7 +44,10 @@ class StatusIndicator(QLabel):
 
 
 class GraphFetchWorker(QThread):
-    """Fetch graph data in background to avoid blocking UI."""
+    """Fetch graph data in background to avoid blocking UI.
+
+    Deprecated: Consider merging with HttpGetWorker for reuse.
+    """
 
     finished = Signal(dict)
     error = Signal(str)
@@ -77,7 +88,10 @@ class SearchFetchWorker(QThread):
 
 
 class AnalyticsFetchWorker(QThread):
-    """Fetch analytics data in background."""
+    """Fetch analytics data in background.
+
+    Deprecated: Consider merging with GraphFetchWorker for reuse.
+    """
 
     finished = Signal(dict)
     error = Signal(str)
@@ -99,7 +113,7 @@ class ProjectDashboard(QWidget):
     """Per-project view with status, controls, graph, and logs."""
 
     start_requested = Signal(str)  # project name
-    stop_requested = Signal(str)   # project name
+    stop_requested = Signal(str)  # project name
     open_folder_requested = Signal(str)  # project path
 
     def __init__(self, parent=None):
@@ -180,6 +194,7 @@ class ProjectDashboard(QWidget):
 
         # Graph tab
         from celebi.ui.graph_view import GraphView
+
         self._graph_view = GraphView()
         graph_widget = QWidget()
         graph_layout = QVBoxLayout(graph_widget)
@@ -372,7 +387,6 @@ class ProjectDashboard(QWidget):
 
             if step_type == "prompt":
                 try:
-                    import json
                     msg_data = json.loads(payload)
                     msgs = msg_data.get("messages", [])
                     for m in reversed(msgs):
@@ -397,6 +411,7 @@ class ProjectDashboard(QWidget):
 
     def _on_search_result_clicked(self, item: QListWidgetItem):
         from celebi.ui.graph_view import NodeDetailDialog
+
         node_id = item.data(Qt.ItemDataRole.UserRole)
         if not node_id or not self._project:
             return
@@ -407,7 +422,10 @@ class ProjectDashboard(QWidget):
             resp.raise_for_status()
             data = resp.json()
             dialog = NodeDetailDialog(
-                data["node_id"], data["step_type"], data["payload"], self.window(),
+                data["node_id"],
+                data["step_type"],
+                data["payload"],
+                self.window(),
                 proxy_url=f"http://localhost:{self._project.proxy_port}",
             )
             dialog.exec()

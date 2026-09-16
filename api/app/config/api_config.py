@@ -7,14 +7,15 @@ No hardcoded models — everything comes from the user's config.
 import json
 import logging
 import os
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 CONFIG_DIR = Path.home() / ".celebi"
 GLOBAL_FILE = CONFIG_DIR / "global.json"
 
+# Deprecated: duplicated in celebi/config.py — consolidate into shared module
 PROVIDER_PREFIXES = {
     "gemini": "gemini/",
     "anthropic": "anthropic/",

@@ -1,0 +1,25 @@
+# Dev Dockerfile — bundles all functional dependencies for contributors
+# End users should download the binary from GitHub Releases instead.
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install uv for fast dependency management
+RUN pip install uv
+
+# Copy dependency files first for caching
+COPY api/pyproject.toml api/uv.lock ./
+
+# Install all dependencies including dev (ruff, pytest, etc.)
+RUN uv sync
+
+# Copy full project code
+COPY . .
+
+EXPOSE 8000 4000
+
+# Default: run both litellm and fastapi
+CMD ["sh", "-c", "\
+  python -m litellm --config api/app/config/litellm-config.yaml --port ${LITELLM_PORT:-4000} & \
+  python -m uvicorn api.main:app --host 0.0.0.0 --port ${PROXY_PORT:-8000} \
+"]

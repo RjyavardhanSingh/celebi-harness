@@ -7,7 +7,6 @@ Flow:
 """
 
 import httpx
-from typing import Optional
 
 
 async def fetch_models(provider: str, api_key: str) -> list[str]:
@@ -69,10 +68,12 @@ async def _fetch_anthropic_models(api_key: str) -> list[str]:
     Anthropic's API doesn't expose a /models endpoint, so we return
     the commonly used Claude models. User can also type a custom model.
     """
-    return sorted([
-        "claude-3-5-haiku-20241022",
-        "claude-3-5-sonnet-20241022",
-        "claude-3-opus-20240229",
-        "claude-sonnet-4-20250514",
-        "claude-opus-4-20250514",
-    ])
+    return sorted(
+        [
+            "claude-3-5-haiku-20241022",
+            "claude-3-5-sonnet-20241022",
+            "claude-3-opus-20240229",
+            "claude-sonnet-4-20250514",
+            "claude-opus-4-20250514",
+        ]
+    )

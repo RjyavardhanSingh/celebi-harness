@@ -1,19 +1,33 @@
-"""Setup wizard — two-page flow: Project → Credentials → Done."""
+"""Setup wizard — two-page flow: Project -> Credentials -> Done.
+
+Deprecated: Project creation form duplicated in projects_sidebar.py.
+Consider extracting a shared ProjectFormWidget class.
+"""
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget,
-    QPushButton, QLabel, QLineEdit, QComboBox, QFileDialog,
-    QFormLayout, QGroupBox, QMessageBox,
+    QComboBox,
+    QFileDialog,
+    QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont
 
+from celebi.agents import get_agent_display_name, get_agent_names
 from celebi.config import (
-    GlobalConfig, save_global, add_project, load_projects, ProjectConfig,
+    GlobalConfig,
+    ProjectConfig,
+    add_project,
+    save_global,
 )
-from celebi.agents import get_agent_names, get_agent_display_name
 from celebi.workers import ModelFetchWorker
 
 

@@ -1,15 +1,19 @@
+import json
+
 from fastapi import FastAPI, Query
 from fastapi.responses import JSONResponse
 
-from app.router.interceptor import router as interceptor_router
 from app.config.db import conn
+from app.router.interceptor import router as interceptor_router
 
 app = FastAPI(title="celebi-harness")
 app.include_router(interceptor_router)
 
+
 @app.get("/")
 def send_hello():
     return {"message": "Hello Traveller"}
+
 
 @app.get("/graph")
 def get_graph():
@@ -29,23 +33,28 @@ def get_graph():
             sid, stype, etype, ttype, tid, spayload, tpayload = row
             node_ids.add(sid)
             node_ids.add(tid)
-            edges.append({
-                "source_id": sid,
-                "source_type": stype,
-                "edge_type": etype,
-                "target_type": ttype,
-                "target_id": tid,
-                "source_payload": spayload or "",
-                "target_payload": tpayload or "",
-            })
+            edges.append(
+                {
+                    "source_id": sid,
+                    "source_type": stype,
+                    "edge_type": etype,
+                    "target_type": ttype,
+                    "target_id": tid,
+                    "source_payload": spayload or "",
+                    "target_payload": tpayload or "",
+                }
+            )
 
-        return JSONResponse({
-            "nodes": len(node_ids),
-            "edges": len(edges),
-            "data": edges,
-        })
+        return JSONResponse(
+            {
+                "nodes": len(node_ids),
+                "edges": len(edges),
+                "data": edges,
+            }
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
 
 @app.get("/search")
 def search_conversations(q: str = Query(..., min_length=1)):
@@ -60,15 +69,18 @@ def search_conversations(q: str = Query(..., min_length=1)):
         while result.has_next():
             row = result.get_next()
             nid, ntype, payload = row
-            matches.append({
-                "node_id": nid,
-                "step_type": ntype,
-                "payload": payload or "",
-            })
+            matches.append(
+                {
+                    "node_id": nid,
+                    "step_type": ntype,
+                    "payload": payload or "",
+                }
+            )
 
         return JSONResponse({"query": q, "count": len(matches), "results": matches})
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
 
 @app.get("/node/{node_id}")
 def get_node(node_id: str):
@@ -84,13 +96,16 @@ def get_node(node_id: str):
 
         row = result.get_next()
         nid, ntype, payload = row
-        return JSONResponse({
-            "node_id": nid,
-            "step_type": ntype,
-            "payload": payload or "",
-        })
+        return JSONResponse(
+            {
+                "node_id": nid,
+                "step_type": ntype,
+                "payload": payload or "",
+            }
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
+
 
 @app.get("/analytics")
 def get_analytics():
@@ -120,8 +135,7 @@ def get_analytics():
                 if not chunk or chunk == "[DONE]":
                     continue
                 try:
-                    import json as _json
-                    d = _json.loads(chunk)
+                    d = json.loads(chunk)
                     usage = d.get("usage")
                     if usage:
                         req_prompt = usage.get("prompt_tokens", 0)
@@ -131,19 +145,23 @@ def get_analytics():
 
             total_prompt_tokens += req_prompt
             total_completion_tokens += req_completion
-            per_request.append({
-                "node_id": nid[:12],
-                "prompt_tokens": req_prompt,
-                "completion_tokens": req_completion,
-                "total_tokens": req_prompt + req_completion,
-            })
+            per_request.append(
+                {
+                    "node_id": nid[:12],
+                    "prompt_tokens": req_prompt,
+                    "completion_tokens": req_completion,
+                    "total_tokens": req_prompt + req_completion,
+                }
+            )
 
-        return JSONResponse({
-            "total_prompt_tokens": total_prompt_tokens,
-            "total_completion_tokens": total_completion_tokens,
-            "total_tokens": total_prompt_tokens + total_completion_tokens,
-            "request_count": request_count,
-            "per_request": per_request,
-        })
+        return JSONResponse(
+            {
+                "total_prompt_tokens": total_prompt_tokens,
+                "total_completion_tokens": total_completion_tokens,
+                "total_tokens": total_prompt_tokens + total_completion_tokens,
+                "request_count": request_count,
+                "per_request": per_request,
+            }
+        )
     except Exception as e:
         return JSONResponse({"error": str(e)}, status_code=500)
