@@ -1,9 +1,12 @@
 import uuid
-from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import StreamingResponse, JSONResponse
+
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import JSONResponse, StreamingResponse
+
 from app.service.proxy_service import stream_upstream_request
 
 router = APIRouter()
+
 
 async def _handle_chat_completions(request: Request):
     try:
@@ -17,18 +20,19 @@ async def _handle_chat_completions(request: Request):
     byte_stream = stream_upstream_request(payload, headers, response_id)
 
     return StreamingResponse(
-        byte_stream,
-        media_type="text/event-stream",
-        headers={"X-Celebi-Response-id": response_id}
+        byte_stream, media_type="text/event-stream", headers={"X-Celebi-Response-id": response_id}
     )
+
 
 @router.post("/v1/chat/completions")
 async def intercept_chat_completions_v1(request: Request):
     return await _handle_chat_completions(request)
 
+
 @router.post("/chat/completions")
 async def intercept_chat_completions(request: Request):
     return await _handle_chat_completions(request)
+
 
 @router.post("/v1/replay")
 async def intercept_replay(request: Request):
@@ -54,7 +58,12 @@ async def intercept_replay(request: Request):
     try:
         conn.execute(
             "CREATE (s:State {id: $id, step_type: 'prompt', payload: $payload})",
-            {"id": prompt_id, "payload": prompt_payload if isinstance(prompt_payload, str) else __import__("json").dumps(prompt_payload)}
+            {
+                "id": prompt_id,
+                "payload": prompt_payload
+                if isinstance(prompt_payload, str)
+                else __import__("json").dumps(prompt_payload),
+            },
         )
     except RuntimeError as e:
         return JSONResponse({"error": f"Failed to create prompt: {e}"}, status_code=500)
@@ -67,7 +76,7 @@ async def intercept_replay(request: Request):
                 WHERE parent.id = $parent_id AND prompt.id = $prompt_id
                 CREATE (parent)-[:BRANCHED_TO]->(prompt)
                 """,
-                {"parent_id": parent_id, "prompt_id": prompt_id}
+                {"parent_id": parent_id, "prompt_id": prompt_id},
             )
         except RuntimeError:
             pass
@@ -75,7 +84,7 @@ async def intercept_replay(request: Request):
     try:
         conn.execute(
             "CREATE (s:State {id: $id, step_type: 'response', payload: $payload})",
-            {"id": response_id, "payload": response_payload}
+            {"id": response_id, "payload": response_payload},
         )
     except RuntimeError as e:
         return JSONResponse({"error": f"Failed to create response: {e}"}, status_code=500)
@@ -87,7 +96,7 @@ async def intercept_replay(request: Request):
             WHERE p.id = $prompt_id AND r.id = $response_id
             CREATE (p)-[:TRANSITIONED_TO]->(r)
             """,
-            {"prompt_id": prompt_id, "response_id": response_id}
+            {"prompt_id": prompt_id, "response_id": response_id},
         )
     except RuntimeError:
         pass

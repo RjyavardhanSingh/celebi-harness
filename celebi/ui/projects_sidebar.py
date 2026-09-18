@@ -2,26 +2,39 @@
 
 from pathlib import Path
 
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem,
-    QPushButton, QLabel, QFileDialog, QMessageBox,
-    QAbstractItemView, QComboBox, QLineEdit, QDialog, QDialogButtonBox,
+    QAbstractItemView,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
     QFormLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QListWidget,
+    QListWidgetItem,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal, Qt
 
+from celebi.agents import get_agent_display_name, get_agent_names
 from celebi.config import (
-    load_projects, add_project, remove_project,
+    add_project,
+    load_projects,
+    remove_project,
 )
-from celebi.agents import get_agent_names, get_agent_display_name
 
 
 class ProjectsSidebar(QWidget):
     """Left sidebar showing project list with add/remove."""
 
     project_selected = Signal(str)  # project name
-    project_added = Signal(str)     # project name
-    project_removed = Signal(str)   # project name
+    project_added = Signal(str)  # project name
+    project_removed = Signal(str)  # project name
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -94,7 +107,8 @@ class ProjectsSidebar(QWidget):
             return
         name = item.data(Qt.ItemDataRole.UserRole)
         reply = QMessageBox.question(
-            self, "Remove Project",
+            self,
+            "Remove Project",
             f"Remove '{name}' from Celebi?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         )

@@ -1,6 +1,7 @@
-import kuzu
 import logging
 from pathlib import Path
+
+import kuzu
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -13,35 +14,36 @@ logger = logging.getLogger(__name__)
 logger.info("Starting db connection")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = str(BASE_DIR/"kuzu.db")
+DB_PATH = str(BASE_DIR / "kuzu.db")
 
 db = kuzu.Database(DB_PATH)
 conn = kuzu.Connection(db)
 
+
 def __init_db__():
 
     try:
-        conn.execute("CREATE NODE TABLE State(id STRING, step_type STRING, payload STRING, PRIMARY KEY (id))") #
+        conn.execute(
+            "CREATE NODE TABLE State(id STRING, step_type STRING, payload STRING, PRIMARY KEY (id))"
+        )
     except RuntimeError as e:
         if "already exists" not in str(e):
             logger.warning("Failed to create State table: %s", e)
-    try:   
+    try:
         # Create the directional relationship table
-        conn.execute("CREATE REL TABLE TRANSITIONED_TO(FROM State TO State)") #
+        conn.execute("CREATE REL TABLE TRANSITIONED_TO(FROM State TO State)")
     except RuntimeError as e:
         if "already exists" not in str(e):
             logger.warning("Failed to create TRANSITIONED_TO table: %s", e)
     try:
-        #the branching relationship
+        # the branching relationship
         conn.execute("CREATE REL TABLE BRANCHED_TO(FROM State TO State)")
     except RuntimeError as e:
         if "already exists" not in str(e):
             logger.warning("Failed to create BRANCHED_TO table: %s", e)
-        
-        
+
     logger.info("Celebi timeline initialized successfully.")
 
-    
     return conn
 
 

@@ -6,7 +6,6 @@ Celebi generates the correct config file so the agent routes through the proxy.
 
 import json
 from pathlib import Path
-from typing import Callable
 
 
 def write_opencode_config(project_path: str, proxy_port: int, model: str) -> Path:
@@ -17,16 +16,10 @@ def write_opencode_config(project_path: str, proxy_port: int, model: str) -> Pat
             "celebi": {
                 "npm": "@ai-sdk/openai-compatible",
                 "name": "Celebi Proxy",
-                "options": {
-                    "baseURL": f"http://localhost:{proxy_port}"
-                },
-                "models": {
-                    model: {
-                        "name": f"{model} (via Celebi)"
-                    }
-                }
+                "options": {"baseURL": f"http://localhost:{proxy_port}"},
+                "models": {model: {"name": f"{model} (via Celebi)"}},
             }
-        }
+        },
     }
     path = Path(project_path) / "opencode.json"
     path.write_text(json.dumps(config, indent=2))

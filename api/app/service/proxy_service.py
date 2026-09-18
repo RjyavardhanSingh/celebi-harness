@@ -1,94 +1,89 @@
-import httpx
 import json
 import logging
 import uuid
+from collections.abc import AsyncGenerator
 
-from typing import AsyncGenerator
+import httpx
 
-from app.config.db import conn
 from app.config.api_config import api_config
+from app.config.db import conn
 
 UPSTREAM_URL = api_config.upstream_url
 logger = logging.getLogger(__name__)
 
+
 async def stream_upstream_request(
-        payload: dict,
-        headers: dict,
-        response_id: str,
+    payload: dict,
+    headers: dict,
+    response_id: str,
 ) -> AsyncGenerator[bytes, None]:
     """
     Opens raw streaming pipeline to the upstream LLM provider
     as yields chunk as raw  bytes the microsecond they arrive
     """
 
-    #Clean the headers so we don't send conflicting host length
+    # Clean the headers so we don't send conflicting host length
     forward_headers = {
-        "Authorization": headers.get("authorization", "") or headers.get("Authorization",""),
-        "Content-Type": "application/json"
+        "Authorization": headers.get("authorization", "") or headers.get("Authorization", ""),
+        "Content-Type": "application/json",
     }
 
     try:
         prompt_id = str(uuid.uuid4())
         conn.execute(
             "CREATE (s:State {id: $id, step_type: 'prompt', payload: $payload})",
-            {"id": prompt_id, "payload": json.dumps(payload)}
+            {"id": prompt_id, "payload": json.dumps(payload)},
         )
     except RuntimeError as e:
-         logger.error(f"Failed to load prompt state: {e}")
-    
+        logger.error(f"Failed to load prompt state: {e}")
 
     parent_id = headers.get("x-celebi-parent-id") or headers.get("X-Celebi-Parent-Id")
 
     try:
         if parent_id:
-            
-                conn.execute(
+            conn.execute(
                 """
                 MATCH (parent:State), (prompt:State)
                 WHERE parent.id = $parent_id AND prompt.id = $prompt_id
                 CREATE (parent)-[:BRANCHED_TO]->(prompt)
                 """,
-                {"parent_id": parent_id, "prompt_id": prompt_id}
-                )
+                {"parent_id": parent_id, "prompt_id": prompt_id},
+            )
     except RuntimeError as e:
-            logger.error(f"Failed to create parent state: {e}")
-    
-    try:
+        logger.error(f"Failed to create parent state: {e}")
 
+    try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             async with client.stream(
-                "POST",
-                UPSTREAM_URL,
-                json=payload,
-                headers=forward_headers
+                "POST", UPSTREAM_URL, json=payload, headers=forward_headers
             ) as upstream_response:
-                
                 if upstream_response.status_code != 200:
                     error_body = await upstream_response.aread()
                     error_text = error_body.decode("utf-8", errors="replace")
-                    error_payload = json.dumps({
-                        "error": {
-                            "message": f"Upstream Error {upstream_response.status_code}: {error_text}",
-                            "type": "upstream_error",
-                            "code": upstream_response.status_code,
+                    error_payload = json.dumps(
+                        {
+                            "error": {
+                                "message": f"Upstream Error {upstream_response.status_code}: {error_text}",
+                                "type": "upstream_error",
+                                "code": upstream_response.status_code,
+                            }
                         }
-                    })
-                    yield f"data: {error_payload}\n\n".encode("utf-8")
+                    )
+                    yield f"data: {error_payload}\n\n".encode()
                     return
 
                 try:
                     accumulated_response = ""
 
-                    #For sendind data byte by byte aiter)bytes is used
+                    # For sendind data byte by byte aiter)bytes is used
                     async for raw_chunk in upstream_response.aiter_bytes():
                         if raw_chunk:
-                            accumulated_response += raw_chunk.decode('utf-8', errors='ignore')
+                            accumulated_response += raw_chunk.decode("utf-8", errors="ignore")
                             yield raw_chunk
-
 
                     conn.execute(
                         "CREATE (s:State {id: $id, step_type: 'response', payload: $payload})",
-                        {"id": response_id, "payload": accumulated_response}
+                        {"id": response_id, "payload": accumulated_response},
                     )
                 except RuntimeError as e:
                     logger.error(f"Failed to create response state: {e}")
@@ -96,17 +91,27 @@ async def stream_upstream_request(
                 try:
                     conn.execute(
                         """
-                        MATCH (p:State), (r:State) 
+                        MATCH (p:State), (r:State)
                         WHERE p.id = $prompt_id AND r.id = $response_id
                         CREATE (p)-[:TRANSITIONED_TO]->(r)
                         """,
-                        {"prompt_id": prompt_id, "response_id": response_id}
+                        {"prompt_id": prompt_id, "response_id": response_id},
                     )
                 except RuntimeError as e:
                     logger.error(f"Failed to create transition edge: {e}")
     except httpx.ConnectError as e:
-         error_payload = json.dumps({"error": {"message": f"Upstream connection failed: {e}", "type": "connection_error", "code": 502}})
-         yield f"data: {error_payload}\n\n".encode("utf-8")
-    except httpx.TimeoutException as e:
-         error_payload = json.dumps({"error": {"message": "Upstream timeout", "type": "timeout_error", "code": 504}})
-         yield f"data: {error_payload}\n\n".encode("utf-8")
+        error_payload = json.dumps(
+            {
+                "error": {
+                    "message": f"Upstream connection failed: {e}",
+                    "type": "connection_error",
+                    "code": 502,
+                }
+            }
+        )
+        yield f"data: {error_payload}\n\n".encode()
+    except httpx.TimeoutException:
+        error_payload = json.dumps(
+            {"error": {"message": "Upstream timeout", "type": "timeout_error", "code": 504}}
+        )
+        yield f"data: {error_payload}\n\n".encode()

@@ -6,22 +6,27 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout,
-    QStackedWidget, QMessageBox,
-)
-from PySide6.QtCore import Slot, Qt, QProcess
+from PySide6.QtCore import QProcess, Slot
 from PySide6.QtGui import QAction
-
-from celebi.config import (
-    load_global, load_projects, get_project,
-    GlobalConfig, ProjectConfig,
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QMainWindow,
+    QMessageBox,
+    QStackedWidget,
+    QWidget,
 )
+
 from celebi.agents import generate_agent_config
-from celebi.ui.setup_wizard import SetupWizard
-from celebi.ui.projects_sidebar import ProjectsSidebar
+from celebi.config import (
+    ProjectConfig,
+    get_project,
+    load_global,
+    load_projects,
+)
 from celebi.ui.project_dashboard import ProjectDashboard
+from celebi.ui.projects_sidebar import ProjectsSidebar
 from celebi.ui.settings_tab import SettingsTab
+from celebi.ui.setup_wizard import SetupWizard
 
 API_DIR = Path(__file__).resolve().parent.parent.parent / "api"
 
@@ -128,7 +133,8 @@ class MainWindow(QMainWindow):
 
     def _show_settings(self):
         # Open settings in a simple dialog
-        from PySide6.QtWidgets import QDialog, QVBoxLayout, QPushButton
+        from PySide6.QtWidgets import QDialog, QPushButton, QVBoxLayout
+
         dlg = QDialog(self)
         dlg.setWindowTitle("Settings")
         dlg.setMinimumWidth(450)
@@ -165,6 +171,7 @@ class MainWindow(QMainWindow):
         # Also update the root-level opencode.json so OpenCode picks up the change
         try:
             from celebi.agents import write_opencode_config
+
             celebi_root = Path(__file__).resolve().parent.parent.parent
             write_opencode_config(str(celebi_root), 8000, config.model)
         except Exception as e:
@@ -198,7 +205,8 @@ class MainWindow(QMainWindow):
                 )
             except Exception as e:
                 QMessageBox.warning(
-                    self, "Config Warning",
+                    self,
+                    "Config Warning",
                     f"Could not generate agent config:\n{e}",
                 )
 
@@ -238,7 +246,8 @@ class MainWindow(QMainWindow):
 
         if not self._global_config.api_key:
             QMessageBox.warning(
-                self, "Missing Credentials",
+                self,
+                "Missing Credentials",
                 "Set your API key first (File → Settings).",
             )
             return
@@ -290,11 +299,17 @@ class MainWindow(QMainWindow):
 
         litellm_proc.setWorkingDirectory(str(API_DIR))
         uv_bin = shutil.which("uv") or "uv"
-        litellm_proc.start(uv_bin, [
-            "run", "litellm",
-            "--config", str(litellm_config_path),
-            "--port", str(project.litellm_port),
-        ])
+        litellm_proc.start(
+            uv_bin,
+            [
+                "run",
+                "litellm",
+                "--config",
+                str(litellm_config_path),
+                "--port",
+                str(project.litellm_port),
+            ],
+        )
 
         if not litellm_proc.waitForStarted(5000):
             self._dashboard.set_error("Failed to start LiteLLM")
@@ -313,12 +328,18 @@ class MainWindow(QMainWindow):
         proxy_proc.setProcessEnvironment(proxy_env)
 
         proxy_proc.setWorkingDirectory(str(API_DIR))
-        proxy_proc.start(sys.executable, [
-            "-m", "uvicorn",
-            "main:app",
-            "--host", "127.0.0.1",
-            "--port", str(project.proxy_port),
-        ])
+        proxy_proc.start(
+            sys.executable,
+            [
+                "-m",
+                "uvicorn",
+                "main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(project.proxy_port),
+            ],
+        )
 
         if not proxy_proc.waitForStarted(5000):
             litellm_proc.kill()
@@ -331,15 +352,13 @@ class MainWindow(QMainWindow):
         }
 
         self._dashboard.set_running()
-        self.statusBar().showMessage(
-            f"Running on :{project.proxy_port}", 5000
-        )
+        self.statusBar().showMessage(f"Running on :{project.proxy_port}", 5000)
 
     @Slot(str)
     def _on_stop_project(self, name: str):
         self._kill_project_processes(name)
         self._dashboard.set_stopped()
-        self.statusBar().showMessage(f"Stopped", 3000)
+        self.statusBar().showMessage("Stopped", 3000)
 
     @Slot(str)
     def _on_open_folder(self, path: str):
@@ -365,7 +384,8 @@ class MainWindow(QMainWindow):
         try:
             subprocess.run(
                 ["fuser", "-k", f"{port}/tcp"],
-                capture_output=True, timeout=5,
+                capture_output=True,
+                timeout=5,
             )
         except Exception:
             pass
@@ -381,7 +401,8 @@ class MainWindow(QMainWindow):
         running = [n for n, p in self._processes.items() if self._is_running(n)]
         if running:
             reply = QMessageBox.question(
-                self, "Quit Celebi?",
+                self,
+                "Quit Celebi?",
                 f"Projects running: {', '.join(running)}.\nStop and quit?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
@@ -396,7 +417,4 @@ class MainWindow(QMainWindow):
     def _is_running(self, name: str) -> bool:
         if name not in self._processes:
             return False
-        return any(
-            p and p.state() == QProcess.Running
-            for p in self._processes[name].values()
-        )
+        return any(p and p.state() == QProcess.Running for p in self._processes[name].values())

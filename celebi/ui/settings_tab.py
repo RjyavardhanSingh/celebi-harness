@@ -3,11 +3,18 @@
 Flow: User selects provider → enters API key → models fetched → select from dropdown.
 """
 
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QFormLayout, QHBoxLayout,
-    QLineEdit, QComboBox, QLabel, QGroupBox, QPushButton,
+    QComboBox,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal, Qt
 
 from celebi.config import GlobalConfig, save_global
 from celebi.workers import ModelFetchWorker

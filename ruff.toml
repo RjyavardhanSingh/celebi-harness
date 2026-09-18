@@ -1,0 +1,24 @@
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "SIM"]
+ignore = [
+    "E501",    # line too long — handled by formatter
+    "N802",    # function name should be lowercase — Qt uses camelCase
+    "N807",    # function name should not start and end with __ — intentional
+    "SIM105",  # use contextlib.suppress — try-except-pass is clearer
+    "SIM108",  # use ternary operator — if-else is more readable
+    "SIM117",  # use single with statement — nested is sometimes clearer
+    "B904",    # raise ... from — not always needed for HTTPException
+    "BLE001",  # do not catch blind exception — intentional catch-all handlers
+    "S110",    # try-except-pass — intentional silent failure
+    "PLW1510", # subprocess.run without check — check=False is implicit
+    "DTZ005",  # datetime.now() without tz — local time is intentional for logs
+]
+
+[lint.isort]
+known-first-party = ["celebi", "app"]
+
+[format]
+quote-style = "double"

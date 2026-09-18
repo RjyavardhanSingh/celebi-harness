@@ -6,11 +6,10 @@ Usage:
     uv run celebi
 """
 
-import sys
 import logging
+import sys
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
 
 from celebi.ui.main_window import MainWindow
 

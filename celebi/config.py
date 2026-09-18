@@ -8,9 +8,8 @@ Two-level config:
 import json
 import logging
 import os
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from dataclasses import dataclass, asdict
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +33,7 @@ PROVIDER_PREFIXES = {
 @dataclass
 class GlobalConfig:
     """User fills once — credentials and provider settings."""
+
     provider: str = ""
     api_key: str = ""
     model: str = ""
@@ -70,6 +70,7 @@ class GlobalConfig:
 @dataclass
 class ProjectConfig:
     """One per project — agent type, ports, project path."""
+
     name: str = ""
     path: str = ""
     agent: str = "opencode"
@@ -87,15 +88,15 @@ class ProjectConfig:
 
 # --- Load / Save ---
 
+
 def load_global() -> GlobalConfig:
     if GLOBAL_FILE.exists():
         try:
             with open(GLOBAL_FILE) as f:
                 data = json.load(f)
-            return GlobalConfig(**{
-                k: v for k, v in data.items()
-                if k in GlobalConfig.__dataclass_fields__
-            })
+            return GlobalConfig(
+                **{k: v for k, v in data.items() if k in GlobalConfig.__dataclass_fields__}
+            )
         except (json.JSONDecodeError, TypeError) as e:
             logger.warning("Corrupted %s, resetting to defaults: %s", GLOBAL_FILE, e)
     return GlobalConfig()
@@ -110,7 +111,7 @@ def save_global(config: GlobalConfig) -> None:
         logger.error("Failed to save %s: %s", GLOBAL_FILE, e)
 
 
-def load_projects() -> List[ProjectConfig]:
+def load_projects() -> list[ProjectConfig]:
     if PROJECTS_FILE.exists():
         try:
             with open(PROJECTS_FILE) as f:
@@ -121,7 +122,7 @@ def load_projects() -> List[ProjectConfig]:
     return []
 
 
-def save_projects(projects: List[ProjectConfig]) -> None:
+def save_projects(projects: list[ProjectConfig]) -> None:
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     try:
         with open(PROJECTS_FILE, "w") as f:
@@ -130,7 +131,7 @@ def save_projects(projects: List[ProjectConfig]) -> None:
         logger.error("Failed to save %s: %s", PROJECTS_FILE, e)
 
 
-def next_port(projects: List[ProjectConfig]) -> tuple:
+def next_port(projects: list[ProjectConfig]) -> tuple:
     used_proxy = {p.proxy_port for p in projects}
     used_litellm = {p.litellm_port for p in projects}
     proxy_port = 8000
@@ -146,8 +147,11 @@ def add_project(name: str, path: str, agent: str) -> ProjectConfig:
     projects = load_projects()
     proxy_port, litellm_port = next_port(projects)
     project = ProjectConfig(
-        name=name, path=path, agent=agent,
-        proxy_port=proxy_port, litellm_port=litellm_port,
+        name=name,
+        path=path,
+        agent=agent,
+        proxy_port=proxy_port,
+        litellm_port=litellm_port,
     )
     projects.append(project)
     save_projects(projects)
@@ -160,7 +164,7 @@ def remove_project(name: str) -> None:
     save_projects(projects)
 
 
-def get_project(name: str) -> Optional[ProjectConfig]:
+def get_project(name: str) -> ProjectConfig | None:
     for p in load_projects():
         if p.name == name:
             return p

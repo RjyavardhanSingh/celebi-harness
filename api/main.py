@@ -1,5 +1,11 @@
-from pylogs_hook import patch; patch()
+# Deprecated: pylogs_hook is a local-only dev tool, not shipped in production.
+# This file is kept for backward compatibility with local development setups.
+# In production, use app.main:app directly (see Dockerfile).
+try:
+    from pylogs_hook import patch
 
-from app.main import app
+    patch()
+except ImportError:
+    pass
 
-
+from app.main import app  # noqa: E402, F401  (uvicorn imports main:app)
