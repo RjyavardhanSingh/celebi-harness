@@ -29,7 +29,7 @@ api/app/query_test.py
 #local vscode settings
 .vscode/
 
-#agent json
+#agent json this can be different for diffrent json
 opencode.json
 
 # Build artifacts
