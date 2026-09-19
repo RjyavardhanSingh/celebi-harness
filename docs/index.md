@@ -14,11 +14,13 @@ Named after the time-traveling Pokemon — because debugging LLMs should feel li
 
 ## Download
 
-| Platform | Installer | Guide |
-|----------|-----------|-------|
-| **macOS** (Apple Silicon / Intel) | [celebi-macos.dmg](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-macos.dmg) | [Install Guide](install/macos.md) |
-| **Linux** (Debian / Ubuntu) | [celebi-linux-amd64.deb](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi_0.1.0_amd64.deb) | [Install Guide](install/linux.md) |
-| **Windows** (x64) | [celebi-windows-setup.exe](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-windows-setup.exe) | [Install Guide](install/windows.md) |
+Go to [**GitHub Releases**](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) to download the latest installer.
+
+| Platform | File | Guide |
+|----------|------|-------|
+| **macOS** (Apple Silicon / Intel) | `celebi-*-macos.dmg` | [Install Guide](install/macos.md) |
+| **Linux** (Debian / Ubuntu) | `celebi_*_amd64.deb` | [Install Guide](install/linux.md) |
+| **Windows** (x64) | `celebi-*-windows-setup.exe` | [Install Guide](install/windows.md) |
 
 ## What does Celebi do?
 

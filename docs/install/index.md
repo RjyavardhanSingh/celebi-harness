@@ -16,17 +16,19 @@ Choose your platform below to install Celebi.
 
 ## Download
 
-| Platform | Installer |
-|----------|-----------|
-| **macOS** | [celebi-0.1.0-macos.dmg](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-macos.dmg) |
-| **Linux** | [celebi_0.1.0_amd64.deb](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi_0.1.0_amd64.deb) |
-| **Windows** | [celebi-0.1.0-windows-setup.exe](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-windows-setup.exe) |
+Go to [**GitHub Releases**](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) to download the latest installer for your platform.
+
+| Platform | File |
+|----------|------|
+| **macOS** | `celebi-*-macos.dmg` |
+| **Linux** | `celebi_*_amd64.deb` |
+| **Windows** | `celebi-*-windows-setup.exe` |
+
+Each release includes SHA256 checksums (`.sha256` files) for verification.
 
 ---
 
 ## Verifying Downloads
-
-Each release includes SHA256 checksums. Verify your download:
 
 ```bash
 # Linux / macOS
