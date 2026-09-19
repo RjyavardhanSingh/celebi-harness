@@ -59,7 +59,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: celebi-macos-dmg
-          path: celebi-*-macos.dmg
+          path: |
+            celebi-*-macos.dmg
+            celebi-*-macos.dmg.sha256
           if-no-files-found: error
 
   # ─── Linux .deb ───────────────────────────────────────────────
@@ -96,7 +98,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: celebi-linux-deb
-          path: dist/celebi_*.deb
+          path: |
+            dist/celebi_*.deb
+            dist/celebi_*.deb.sha256
           if-no-files-found: error
 
   # ─── Windows .exe installer ──────────────────────────────────
@@ -129,7 +133,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: celebi-windows-exe
-          path: celebi-*-windows-setup.exe
+          path: |
+            dist/celebi-*-windows-setup.exe
+            dist/celebi-*-windows-setup.exe.sha256
           if-no-files-found: error
 
   # ─── Create GitHub Release ───────────────────────────────────
