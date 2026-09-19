@@ -4,7 +4,38 @@
 import sys
 from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files
+
 block_cipher = None
+
+
+def _api_datas():
+    """Bundle only the runtime API package.
+
+    The whole api/ tree must NOT be bundled: it contains the dev .venv
+    (gigabytes), caches, tests, and a dev kuzu.db. The frozen proxy child
+    only needs api/app/** (imported as top-level `app`).
+    """
+    skip_dirs = {'.venv', '__pycache__', 'tests', '.pytest_cache', '.ruff_cache'}
+    skip_files = {'kuzu.db'}
+    skip_suffixes = {'.pyc'}
+    root = Path('api')
+    out = []
+    for p in sorted((root / 'app').rglob('*')):
+        if not p.is_file():
+            continue
+        if any(part in skip_dirs for part in p.parts):
+            continue
+        if p.name in skip_files or p.suffix in skip_suffixes:
+            continue
+        out.append((str(p), str(Path('api') / p.relative_to(root).parent)))
+    return out
+
+
+# litellm reads pricing/config JSONs at runtime via importlib.resources.
+LITELLM_DATAS = collect_data_files('litellm', includes=['*.json'])
+
+API_DATAS = _api_datas()
 
 # ---------------------------------------------------------------------------
 # LiteLLM uses lazy imports for every provider.  PyInstaller cannot discover
@@ -84,7 +115,8 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[
-        ('api', 'api'),
+        *API_DATAS,
+        *LITELLM_DATAS,
     ],
     hiddenimports=[
         # --- celebi ---

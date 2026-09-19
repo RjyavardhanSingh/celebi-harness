@@ -16,15 +16,39 @@ import sys
 from pathlib import Path
 
 
-def _repo_api_dir() -> Path:
-    # Source: <repo>/celebi/__main__.py -> <repo>/api
-    # Frozen: <bundle>/_internal/celebi/__main__.pyc -> <bundle>/_internal/api
-    return Path(__file__).resolve().parent.parent / "api"
+def _find_api_dir() -> Path:
+    """Locate the bundled `api/` dir.
+
+    `__file__` is unreliable for the frozen entry script, so probe every
+    plausible base: sys._MEIPASS, the frozen exe dir (+ _internal), and the
+    source-tree layout. Returns the first candidate containing app/main.py.
+    """
+    candidates: list[Path] = []
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        base = Path(meipass)
+        candidates += [base / "api", base / "_internal" / "api"]
+    exe = Path(sys.executable).resolve()
+    if exe.name and exe.parent != Path("."):
+        candidates += [exe.parent / "api", exe.parent / "_internal" / "api"]
+    # Source checkout: <repo>/celebi/__main__.py -> <repo>/api
+    candidates.append(Path(__file__).resolve().parent.parent / "api")
+
+    seen = []
+    for cand in candidates:
+        marker = cand / "app" / "main.py"
+        seen.append(str(cand))
+        if marker.is_file():
+            return cand
+    raise FileNotFoundError(
+        "Could not locate bundled api/ dir (looked for app/main.py in: " + ", ".join(seen) + ")"
+    )
 
 
 def _serve_proxy() -> int:
     proxy_port = int(os.environ.get("CELEBI_PROXY_PORT", "8000"))
-    api_dir = _repo_api_dir()
+    api_dir = _find_api_dir()
+    print(f"[celebi] serving proxy API from {api_dir}", flush=True)
     if str(api_dir) not in sys.path:
         sys.path.insert(0, str(api_dir))
 
