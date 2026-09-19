@@ -1,0 +1,45 @@
+site_name: Celebi
+site_url: https://rjyavardhansingh.github.io/celebi-harness/
+site_description: LLM Time Travel Harness — proxy, record, and replay LLM conversations
+repo_url: https://github.com/RjyavardhanSingh/celebi-harness
+repo_name: celebi-harness
+
+theme:
+  name: material
+  palette:
+    scheme: slate
+    primary: deep purple
+    accent: light blue
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - toc.follow
+    - search.highlight
+
+nav:
+  - Home: index.md
+  - Install:
+      - Overview: install/index.md
+      - macOS: install/macos.md
+      - Linux: install/linux.md
+      - Windows: install/windows.md
+  - Quick Start: quickstart.md
+  - Architecture: architecture.md
+  - Agents: agents/index.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: true

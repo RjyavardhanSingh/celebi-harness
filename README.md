@@ -142,12 +142,13 @@ Edges
 
 ## Download
 
-| Platform | Download |
-|----------|----------|
-| Linux (x64) | [celebi-linux-x64.tar.gz](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
-| macOS (ARM64) | [celebi-macos-arm64.tar.gz](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
-| macOS (x64) | [celebi-macos-x64.tar.gz](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
-| Windows (x64) | [celebi-windows-x64.zip](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
+| Platform | Installer |
+|----------|-----------|
+| macOS (Apple Silicon / Intel) | [celebi-macos.dmg](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
+| Linux (Debian / Ubuntu) | [celebi-linux-amd64.deb](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
+| Windows (x64) | [celebi-windows-setup.exe](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) |
+
+**[Full installation guides](https://rjyavardhansingh.github.io/celebi-harness/install/)** | **[Documentation](https://rjyavardhansingh.github.io/celebi-harness/)**
 
 ## Quick Start
 
