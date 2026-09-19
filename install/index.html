@@ -382,6 +382,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -638,6 +649,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#download" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Download
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#verifying-downloads" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -670,37 +692,6 @@
 
 <h1 id="install-celebi">Install Celebi</h1>
 <p>Choose your platform below to install Celebi.</p>
-<div id="platform-detect" style="display:none; margin: 1em 0; padding: 1em; border: 1px solid #4FC3F7; border-radius: 8px; background: #1e1e2e;">
-  <strong>Your platform: <span id="detected-platform"></span></strong>
-  <p id="recommended-action"></p>
-</div>
-
-<script>
-  (function() {
-    var ua = navigator.userAgent.toLowerCase();
-    var platform = document.getElementById('detected-platform');
-    var action = document.getElementById('recommended-action');
-    var box = document.getElementById('platform-detect');
-
-    var os = 'unknown';
-    if (ua.includes('mac')) os = 'macOS';
-    else if (ua.includes('linux')) os = 'Linux';
-    else if (ua.includes('win')) os = 'Windows';
-
-    if (os !== 'unknown') {
-      box.style.display = 'block';
-      platform.textContent = os;
-      if (os === 'macOS') {
-        action.innerHTML = 'Recommended: <a href="macos.md">Install on macOS</a> — download the .dmg installer.';
-      } else if (os === 'Linux') {
-        action.innerHTML = 'Recommended: <a href="linux.md">Install on Linux</a> — download the .deb package.';
-      } else if (os === 'Windows') {
-        action.innerHTML = 'Recommended: <a href="windows.md">Install on Windows</a> — download the .exe installer.';
-      }
-    }
-  })();
-</script>
-
 <hr />
 <h2 id="all-platforms">All Platforms</h2>
 <table>
@@ -726,6 +717,30 @@
 <td>Windows (x64)</td>
 <td><code>.exe</code> installer</td>
 <td><a href="windows/">Windows Install Guide</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="download">Download</h2>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Installer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>macOS</strong></td>
+<td><a href="https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-macos.dmg">celebi-0.1.0-macos.dmg</a></td>
+</tr>
+<tr>
+<td><strong>Linux</strong></td>
+<td><a href="https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi_0.1.0_amd64.deb">celebi_0.1.0_amd64.deb</a></td>
+</tr>
+<tr>
+<td><strong>Windows</strong></td>
+<td><a href="https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-windows-setup.exe">celebi-0.1.0-windows-setup.exe</a></td>
 </tr>
 </tbody>
 </table>
