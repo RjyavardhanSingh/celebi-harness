@@ -30,17 +30,14 @@ async def fetch_models(provider: str, api_key: str) -> list[str]:
         status = e.response.status_code if e.response is not None else None
         if status in (400, 401, 403):
             raise RuntimeError(
-                f"Invalid API key for {provider} (HTTP {status}). "
-                "Check the key and try again."
+                f"Invalid API key for {provider} (HTTP {status}). Check the key and try again."
             ) from e
         raise RuntimeError(f"Failed to fetch {provider} models (HTTP {status}).") from e
     except httpx.RequestError as e:
         raise RuntimeError(f"Network error fetching {provider} models: {e}") from e
 
     if not models:
-        raise RuntimeError(
-            f"No models returned for {provider}. Check the API key and try again."
-        )
+        raise RuntimeError(f"No models returned for {provider}. Check the API key and try again.")
     return models
 
 
