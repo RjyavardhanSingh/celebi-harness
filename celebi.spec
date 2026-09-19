@@ -33,7 +33,12 @@ def _api_datas():
 
 
 # litellm reads pricing/config JSONs at runtime via importlib.resources.
-LITELLM_DATAS = collect_data_files('litellm', includes=['*.json'])
+# Subpackages need their own entries (top-level pattern doesn't recurse).
+LITELLM_DATAS = (
+    collect_data_files('litellm', includes=['*.json'])
+    + collect_data_files('litellm.litellm_core_utils.tokenizers', includes=['*.json'])
+    + collect_data_files('litellm.proxy.public_endpoints', includes=['*.json'])
+)
 
 API_DATAS = _api_datas()
 
@@ -59,6 +64,8 @@ LITELLM_HIDDEN_IMPORTS = [
     'litellm.cost_calculator',
     'litellm.proxy._types',
     'litellm.proxy.proxy_server',
+    # imported only via importlib.resources string refs (litellm/utils.py)
+    'litellm.litellm_core_utils.tokenizers',
     'litellm.secret_managers.main',
     # providers we actually use (from celebi config / model_fetcher)
     'litellm.llms.openai.openai',
