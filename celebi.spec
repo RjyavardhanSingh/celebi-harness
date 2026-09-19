@@ -83,39 +83,14 @@ LITELLM_HIDDEN_IMPORTS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Exclude heavy provider SDKs we don't use to keep bundle size down.
-# Users who need extra providers can rebuild with these removed from the list.
+# NOTE: provider excludes are intentionally disabled. litellm's modules
+# cross-import each other statically (e.g. cost_calculator imports
+# litellm.llms.azure/azure_ai/databricks, integrations import azure), so
+# excluding any litellm.llms.* subpackage breaks the bundle at runtime
+# with ModuleNotFoundError. Bundle size is controlled by shipping only
+# api/app runtime files instead (see _api_datas).
 # ---------------------------------------------------------------------------
-LITELLM_EXCLUDES = [
-    'litellm.llms.vertex',
-    'litellm.llms.vertex_httpx',
-    'litellm.llms.palm',
-    'litellm.llms.azure',
-    'litellm.llms.azure_ai',
-    'litellm.llms.anthropic.experimental',
-    'litellm.llms.text_completion_openai',
-    'litellm.llms.cloudflare',
-    'litellm.llms.nlp_cloud',
-    'litellm.llms.huggingface',
-    'litellm.llms.maker',
-    'litellm.llms.ai21',
-    'litellm.llms.petal',
-    'litellm.llms.ollama',
-    'litellm.llms.volcengine',
-    'litellm.llms.dynamiq',
-    'litellm.llms.galileo',
-    'litellm.llms.luminary',
-    'litellm.llms.predibase',
-    'litellm.llms.databricks',
-    'litellm.llms.sagemaker',
-    'litellm.llms.sagemaker_common',
-    'litellm.llms.WatsonX_AI',
-    'litellm.llms.clarifai',
-    'litellm.llms.vllm',
-    'litellm.llms.nvidia_nim',
-    'litellm.llms.mirqa',
-    'litellm.llms.gradio_title',
-]
+LITELLM_EXCLUDES: list[str] = []
 
 a = Analysis(
     ['celebi/__main__.py'],
