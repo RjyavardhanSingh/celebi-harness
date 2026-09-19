@@ -4,8 +4,10 @@
 !include "MUI2.nsh"
 
 ; ── Configuration ──────────────────────────────────────────────
+!ifndef APP_VERSION
+  !define APP_VERSION "0.1.0"
+!endif
 !define APP_NAME "Celebi"
-!define APP_VERSION "0.1.0"
 !define APP_PUBLISHER "Rajyavardhan Singh"
 !define APP_URL "https://github.com/RjyavardhanSingh/celebi-harness"
 !define APP_EXECUTABLE "celebi.exe"
