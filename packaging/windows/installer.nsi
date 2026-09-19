@@ -1,5 +1,8 @@
 ; Celebi NSIS Installer Script
 ; Build with: makensis installer.nsi
+;
+; NSIS resolves all paths relative to the .nsi file's directory.
+; Use ..\..\ to reference repo root from packaging/windows/.
 
 !include "MUI2.nsh"
 
@@ -15,7 +18,7 @@
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "celebi-${APP_VERSION}-windows-setup.exe"
+OutFile "..\..\dist\celebi-${APP_VERSION}-windows-setup.exe"
 InstallDir "${INSTALL_DIR}"
 InstallDirRegKey HKLM "${UNINST_KEY}" "InstallDir"
 RequestExecutionLevel admin
@@ -48,7 +51,7 @@ Section "Install"
     SetRegView 64
 
     ; Copy all bundle files
-    File /r "dist\celebi\*.*"
+    File /r "..\..\dist\celebi\*.*"
 
     ; Create uninstaller
     WriteUninstaller "$INSTDIR\uninstall.exe"

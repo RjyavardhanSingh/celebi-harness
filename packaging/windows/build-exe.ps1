@@ -17,8 +17,7 @@ $ErrorActionPreference = "Stop"
 
 $AppName = "Celebi"
 $NsiScript = "packaging\windows\installer.nsi"
-$LicenseFile = "LICENSE.txt"
-$IconFile = "assets\logo.png"
+$LicenseFile = "packaging\windows\LICENSE.txt"
 
 Write-Host "==> Building Windows installer for $AppName v$Version"
 
@@ -38,10 +37,10 @@ if (-not $nsisPath) {
     }
 }
 
-# Generate LICENSE.txt if it doesn't exist (NSIS requires it)
+# Generate LICENSE.txt next to the .nsi script (NSIS resolves paths from .nsi dir)
 if (-not (Test-Path $LicenseFile)) {
     Write-Host "==> Creating placeholder LICENSE.txt"
-    @"
+    $license = @"
 MIT License
 
 Copyright (c) 2026 Rajyavardhan Singh
@@ -63,7 +62,12 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-"@ | Set-Content $LicenseFile -Encoding UTF8
+"@
+    [System.IO.File]::WriteAllText(
+        (Join-Path (Get-Location) $LicenseFile),
+        $license,
+        [System.Text.Encoding]::ASCII
+    )
 }
 
 # Build the installer
@@ -74,6 +78,7 @@ if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
+# OutFile in .nsi writes to ..\..\dist\celebi-<ver>-windows-setup.exe (repo root dist/)
 $outputFile = "dist\celebi-$Version-windows-setup.exe"
 if (Test-Path $outputFile) {
     # Generate SHA256 checksum
