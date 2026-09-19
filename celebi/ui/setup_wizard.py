@@ -198,23 +198,42 @@ class SetupWizard(QWidget):
             self._set_status("Enter an API key", error=True)
             return
 
+        # Ignore re-entry while a fetch is already running
+        if self._fetch_worker is not None and self._fetch_worker.isRunning():
+            return
+
         self._fetch_btn.setEnabled(False)
         self._set_status("Fetching models...")
 
-        self._fetch_worker = ModelFetchWorker(provider, api_key)
-        self._fetch_worker.finished.connect(self._on_models_fetched)
+        try:
+            self._fetch_worker = ModelFetchWorker(provider, api_key)
+        except Exception as e:
+            self._fetch_btn.setEnabled(True)
+            self._set_status(f"Error: {e}", error=True)
+            return
+        self._fetch_worker.models_fetched.connect(self._on_models_fetched)
         self._fetch_worker.error.connect(self._on_fetch_error)
         self._fetch_worker.start()
 
     def _on_models_fetched(self, models):
         self._fetch_btn.setEnabled(True)
+        self._cleanup_worker()
+        if not models:
+            self._set_status("No models found — check the API key and try again", error=True)
+            return
         self._model_combo.clear()
         self._model_combo.addItems(models)
         self._set_status(f"Found {len(models)} models", error=False)
 
     def _on_fetch_error(self, msg):
         self._fetch_btn.setEnabled(True)
+        self._cleanup_worker()
         self._set_status(f"Error: {msg}", error=True)
+
+    def _cleanup_worker(self):
+        worker, self._fetch_worker = self._fetch_worker, None
+        if worker is not None:
+            worker.deleteLater()
 
     def _set_status(self, msg, error=False):
         self._status_label.setText(msg)

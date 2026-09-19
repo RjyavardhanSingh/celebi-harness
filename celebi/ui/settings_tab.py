@@ -124,19 +124,36 @@ class SettingsTab(QWidget):
             self._status_label.setStyleSheet("color: #f44336; font-size: 11px;")
             return
 
+        # Ignore re-entry while a fetch is already running
+        if self._fetch_worker is not None and self._fetch_worker.isRunning():
+            return
+
         self._fetch_btn.setEnabled(False)
         self._refresh_btn.setEnabled(False)
         self._status_label.setText("Fetching models...")
         self._status_label.setStyleSheet("color: #FFC107; font-size: 11px;")
 
-        self._fetch_worker = ModelFetchWorker(provider, api_key)
-        self._fetch_worker.finished.connect(self._on_models_fetched)
+        try:
+            self._fetch_worker = ModelFetchWorker(provider, api_key)
+        except Exception as e:
+            self._fetch_btn.setEnabled(True)
+            self._refresh_btn.setEnabled(True)
+            self._status_label.setText(f"Error: {e}")
+            self._status_label.setStyleSheet("color: #f44336; font-size: 11px;")
+            return
+        self._fetch_worker.models_fetched.connect(self._on_models_fetched)
         self._fetch_worker.error.connect(self._on_fetch_error)
         self._fetch_worker.start()
 
     def _on_models_fetched(self, models: list[str]):
         self._fetch_btn.setEnabled(True)
         self._refresh_btn.setEnabled(True)
+        self._cleanup_worker()
+
+        if not models:
+            self._status_label.setText("No models found — check the API key and try again")
+            self._status_label.setStyleSheet("color: #f44336; font-size: 11px;")
+            return
 
         self._model_combo.clear()
         self._model_combo.addItems(models)
@@ -155,8 +172,14 @@ class SettingsTab(QWidget):
     def _on_fetch_error(self, msg: str):
         self._fetch_btn.setEnabled(True)
         self._refresh_btn.setEnabled(True)
+        self._cleanup_worker()
         self._status_label.setText(f"Error: {msg}")
         self._status_label.setStyleSheet("color: #f44336; font-size: 11px;")
+
+    def _cleanup_worker(self):
+        worker, self._fetch_worker = self._fetch_worker, None
+        if worker is not None:
+            worker.deleteLater()
 
     def get_config(self) -> GlobalConfig:
         return GlobalConfig(
