@@ -63,22 +63,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-"@ | Set-Content $LicenseFile
-}
-
-# Convert PNG to ICO if possible (requires ImageMagick or Python)
-$icoFile = "packaging\windows\celebi.ico"
-if (-not (Test-Path $icoFile)) {
-    Write-Host "==> Converting logo.png to .ico"
-    try {
-        python -c @"
-from PIL import Image
-img = Image.open('$($IconFile -replace '\\', '/')')
-img.save('$($icoFile -replace '\\', '/')', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])
-"@
-    } catch {
-        Write-Warning "Could not convert icon (Pillow not installed). NSIS will use default icon."
-    }
+"@ | Set-Content $LicenseFile -Encoding UTF8
 }
 
 # Build the installer
