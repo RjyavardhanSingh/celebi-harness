@@ -22,8 +22,6 @@ RequestExecutionLevel admin
 
 ; ── Interface ──────────────────────────────────────────────────
 !define MUI_ABORTWARNING
-!define MUI_ICON "celebi.ico"
-!define MUI_UNICON "celebi.ico"
 !define MUI_WELCOMEPAGE_TITLE "Welcome to ${APP_NAME} Setup"
 !define MUI_WELCOMEPAGE_TEXT "This wizard will install ${APP_NAME} v${APP_VERSION} on your computer.$\r$\n$\r$\n${APP_NAME} is an LLM Time Travel Harness that captures and visualizes conversations between your coding agent and LLM providers.$\r$\n$\r$\nClick Next to continue."
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXECUTABLE}"

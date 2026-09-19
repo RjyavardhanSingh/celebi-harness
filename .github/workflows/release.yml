@@ -112,7 +112,7 @@ jobs:
         run: uv python install 3.12
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: uv sync --dev && uv pip install pillow
 
       - name: Install NSIS
         run: choco install nsis -y --no-progress
