@@ -6,6 +6,78 @@ from pathlib import Path
 
 block_cipher = None
 
+# ---------------------------------------------------------------------------
+# LiteLLM uses lazy imports for every provider.  PyInstaller cannot discover
+# these through static analysis, so we list the ones we actually support plus
+# the core litellm subpackages that are always needed.
+# ---------------------------------------------------------------------------
+LITELLM_HIDDEN_IMPORTS = [
+    # core
+    'litellm',
+    'litellm.utils',
+    'litellm.main',
+    'litellm.litellm_core_utils',
+    'litellm.litellm_core_utils.core_helpers',
+    'litellm.litellm_core_utils.get_provider_info',
+    'litellm.litellm_core_utils.logging',
+    'litellm.models_response',
+    'litellm.types',
+    'litellm.types.utils',
+    'litellm.types.files',
+    'litellm.types.responses',
+    'litellm.cost_calculator',
+    'litellm.proxy._types',
+    'litellm.secret_managers.main',
+    # providers we actually use (from celebi config / model_fetcher)
+    'litellm.llms.openai.openai',
+    'litellm.llms.openai.openai_handler',
+    'litellm.llms.anthropic.anthropic',
+    'litellm.llms.anthropic.anthropic_handler',
+    'litellm.llms.gemini.gemini',
+    'litellm.llms.gemini.gemini_handler',
+    # other providers that litellm auto-discovers at runtime
+    'litellm.llms.deepseek.deepseek',
+    'litellm.llms.groq.groq',
+    'litellm.llms.mistral.mistral',
+    'litellm.llms.cohere.cohere',
+    'litellm.llms.bedrock.bedrock',
+]
+
+# ---------------------------------------------------------------------------
+# Exclude heavy provider SDKs we don't use to keep bundle size down.
+# Users who need extra providers can rebuild with these removed from the list.
+# ---------------------------------------------------------------------------
+LITELLM_EXCLUDES = [
+    'litellm.llms.vertex',
+    'litellm.llms.vertex_httpx',
+    'litellm.llms.palm',
+    'litellm.llms.azure',
+    'litellm.llms.azure_ai',
+    'litellm.llms.anthropic.experimental',
+    'litellm.llms.text_completion_openai',
+    'litellm.llms.cloudflare',
+    'litellm.llms.nlp_cloud',
+    'litellm.llms.huggingface',
+    'litellm.llms.maker',
+    'litellm.llms.ai21',
+    'litellm.llms.petal',
+    'litellm.llms.ollama',
+    'litellm.llms.volcengine',
+    'litellm.llms.dynamiq',
+    'litellm.llms.galileo',
+    'litellm.llms.luminary',
+    'litellm.llms.predibase',
+    'litellm.llms.databricks',
+    'litellm.llms.sagemaker',
+    'litellm.llms.sagemaker_common',
+    'litellm.llms.WatsonX_AI',
+    'litellm.llms.clarifai',
+    'litellm.llms.vllm',
+    'litellm.llms.nvidia_nim',
+    'litellm.llms.mirqa',
+    'litellm.llms.gradio_title',
+]
+
 a = Analysis(
     ['celebi/__main__.py'],
     pathex=[],
@@ -14,6 +86,7 @@ a = Analysis(
         ('api', 'api'),
     ],
     hiddenimports=[
+        # --- celebi ---
         'celebi',
         'celebi.app',
         'celebi.config',
@@ -27,13 +100,17 @@ a = Analysis(
         'celebi.ui.project_dashboard',
         'celebi.ui.graph_view',
         'celebi.ui.settings_tab',
+        # --- PySide6 ---
         'PySide6',
         'PySide6.QtWidgets',
         'PySide6.QtCore',
         'PySide6.QtGui',
         'PySide6.QtCharts',
+        # --- graph DB ---
         'kuzu',
+        # --- FastAPI / uvicorn ---
         'fastapi',
+        'fastapi.responses',
         'httpx',
         'uvicorn',
         'uvicorn.logging',
@@ -46,15 +123,22 @@ a = Analysis(
         'uvicorn.protocols.websockets.auto',
         'uvicorn.lifespan',
         'uvicorn.lifespan.on',
+        'uvicorn.lifespan.off',
         'starlette',
         'starlette.responses',
+        'starlette.routing',
+        'starlette.middleware',
+        'starlette.middleware.cors',
         'pydantic',
-        'litellm',
+        # --- litellm (comprehensive) ---
+        *LITELLM_HIDDEN_IMPORTS,
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        *LITELLM_EXCLUDES,
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,

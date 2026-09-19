@@ -19,7 +19,9 @@ from PySide6.QtWidgets import (
 from celebi.agents import generate_agent_config
 from celebi.config import (
     ProjectConfig,
+    find_available_port,
     get_project,
+    is_port_available,
     load_global,
     load_projects,
 )
@@ -252,16 +254,50 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # Auto-detect port conflicts and reassign if needed
+        litellm_port = project.litellm_port
+        proxy_port = project.proxy_port
+
+        if not is_port_available(litellm_port):
+            try:
+                litellm_port = find_available_port(litellm_port + 1)
+                self.statusBar().showMessage(
+                    f"LiteLLM port {project.litellm_port} busy, using {litellm_port}",
+                    4000,
+                )
+            except RuntimeError:
+                QMessageBox.critical(
+                    self,
+                    "Port Conflict",
+                    f"LiteLLM port {project.litellm_port} is busy and no alternative ports are available.",
+                )
+                return
+
+        if not is_port_available(proxy_port):
+            try:
+                proxy_port = find_available_port(proxy_port + 1)
+                self.statusBar().showMessage(
+                    f"Proxy port {project.proxy_port} busy, using {proxy_port}",
+                    4000,
+                )
+            except RuntimeError:
+                QMessageBox.critical(
+                    self,
+                    "Port Conflict",
+                    f"Proxy port {project.proxy_port} is busy and no alternative ports are available.",
+                )
+                return
+
         # Kill any stale processes on our ports
-        self._kill_port(project.litellm_port)
-        self._kill_port(project.proxy_port)
+        self._kill_port(litellm_port)
+        self._kill_port(proxy_port)
 
         # Generate agent config
         try:
             config_path = generate_agent_config(
                 project.agent,
                 project.path,
-                project.proxy_port,
+                proxy_port,
                 self._global_config.model,
             )
             self.statusBar().showMessage(f"Generated {config_path.name}", 3000)
@@ -307,7 +343,7 @@ class MainWindow(QMainWindow):
                 "--config",
                 str(litellm_config_path),
                 "--port",
-                str(project.litellm_port),
+                str(litellm_port),
             ],
         )
 
@@ -323,8 +359,8 @@ class MainWindow(QMainWindow):
         )
 
         proxy_env = proxy_proc.processEnvironment()
-        proxy_env.insert("CELEBI_UPSTREAM_PORT", str(project.litellm_port))
-        proxy_env.insert("CELEBI_PROXY_PORT", str(project.proxy_port))
+        proxy_env.insert("CELEBI_UPSTREAM_PORT", str(litellm_port))
+        proxy_env.insert("CELEBI_PROXY_PORT", str(proxy_port))
         proxy_proc.setProcessEnvironment(proxy_env)
 
         proxy_proc.setWorkingDirectory(str(API_DIR))
@@ -337,7 +373,7 @@ class MainWindow(QMainWindow):
                 "--host",
                 "127.0.0.1",
                 "--port",
-                str(project.proxy_port),
+                str(proxy_port),
             ],
         )
 
@@ -352,7 +388,7 @@ class MainWindow(QMainWindow):
         }
 
         self._dashboard.set_running()
-        self.statusBar().showMessage(f"Running on :{project.proxy_port}", 5000)
+        self.statusBar().showMessage(f"Running on :{proxy_port}", 5000)
 
     @Slot(str)
     def _on_stop_project(self, name: str):
@@ -398,7 +434,7 @@ class MainWindow(QMainWindow):
                 self._dashboard.add_log(line, source)
 
     def closeEvent(self, event):
-        running = [n for n, p in self._processes.items() if self._is_running(n)]
+        running = [n for n in self._processes if self._is_running(n)]
         if running:
             reply = QMessageBox.question(
                 self,
@@ -410,8 +446,11 @@ class MainWindow(QMainWindow):
                 event.ignore()
                 return
 
+        # Kill all child processes (QProcess already terminates on parent exit,
+        # but explicit cleanup avoids zombies on some platforms)
         for name in list(self._processes.keys()):
             self._kill_project_processes(name)
+        self._processes.clear()
         event.accept()
 
     def _is_running(self, name: str) -> bool:

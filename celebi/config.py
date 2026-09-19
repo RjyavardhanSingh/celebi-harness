@@ -131,15 +131,34 @@ def save_projects(projects: list[ProjectConfig]) -> None:
         logger.error("Failed to save %s: %s", PROJECTS_FILE, e)
 
 
+def is_port_available(port: int) -> bool:
+    """Check if a TCP port is available on localhost."""
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+def find_available_port(start: int, exclude: set[int] | None = None) -> int:
+    """Find an available port starting from *start*, skipping *exclude*."""
+    exclude = exclude or set()
+    port = start
+    while port in exclude or not is_port_available(port):
+        port += 1
+        if port > 65535:
+            raise RuntimeError("No available ports in range")
+    return port
+
+
 def next_port(projects: list[ProjectConfig]) -> tuple:
     used_proxy = {p.proxy_port for p in projects}
     used_litellm = {p.litellm_port for p in projects}
-    proxy_port = 8000
-    while proxy_port in used_proxy:
-        proxy_port += 1
-    litellm_port = 4000
-    while litellm_port in used_litellm:
-        litellm_port += 1
+    proxy_port = find_available_port(8000, used_proxy)
+    litellm_port = find_available_port(4000, used_litellm)
     return proxy_port, litellm_port
 
 
