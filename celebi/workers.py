@@ -27,9 +27,7 @@ class ModelFetchWorker(QThread):
         try:
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
-            models = self._loop.run_until_complete(
-                fetch_models(self.provider, self.api_key)
-            )
+            models = self._loop.run_until_complete(fetch_models(self.provider, self.api_key))
             self.finished.emit(models)
         except Exception as e:
             logger.warning("Model fetch failed: %s", e)
