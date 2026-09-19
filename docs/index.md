@@ -1,7 +1,7 @@
 # Celebi
 
 <p align="center">
-  <img src="../assets/logo.png" alt="Celebi Logo" width="150"/>
+  <img src="assets/logo.png" alt="Celebi Logo" width="150"/>
 </p>
 
 **Time-Travel Harness for LLM API Streams**
@@ -14,11 +14,11 @@ Named after the time-traveling Pokemon — because debugging LLMs should feel li
 
 ## Download
 
-| Platform | Installer | Checksum |
-|----------|-----------|----------|
-| **macOS** (Apple Silicon / Intel) | [celebi-macos.dmg](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) | SHA256 |
-| **Linux** (Debian / Ubuntu) | [celebi-linux-amd64.deb](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) | SHA256 |
-| **Windows** (x64) | [celebi-windows-setup.exe](https://github.com/RjyavardhanSingh/celebi-harness/releases/latest) | SHA256 |
+| Platform | Installer | Guide |
+|----------|-----------|-------|
+| **macOS** (Apple Silicon / Intel) | [celebi-macos.dmg](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-macos.dmg) | [Install Guide](install/macos.md) |
+| **Linux** (Debian / Ubuntu) | [celebi-linux-amd64.deb](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi_0.1.0_amd64.deb) | [Install Guide](install/linux.md) |
+| **Windows** (x64) | [celebi-windows-setup.exe](https://github.com/RjyavardhanSingh/celebi-harness/releases/download/v0.1.0/celebi-0.1.0-windows-setup.exe) | [Install Guide](install/windows.md) |
 
 ## What does Celebi do?
 
