@@ -27,6 +27,7 @@ LITELLM_HIDDEN_IMPORTS = [
     'litellm.types.responses',
     'litellm.cost_calculator',
     'litellm.proxy._types',
+    'litellm.proxy.proxy_server',
     'litellm.secret_managers.main',
     # providers we actually use (from celebi config / model_fetcher)
     'litellm.llms.openai.openai',
@@ -113,6 +114,9 @@ a = Analysis(
         'fastapi.responses',
         'httpx',
         'uvicorn',
+        'uvicorn.config',
+        'uvicorn.server',
+        'uvicorn.main',
         'uvicorn.logging',
         'uvicorn.loops',
         'uvicorn.loops.auto',

@@ -1,5 +1,75 @@
-"""Allow running as `python -m celebi`."""
+"""Allow running as `python -m celebi`.
 
-from celebi.app import main
+The frozen bundle (PyInstaller) reuses this entry point to host the
+background servers as child processes of the same binary:
 
-main()
+    celebi --serve-proxy                  # FastAPI proxy (ports via env)
+    celebi --serve-litellm --config <yaml> --port <n>   # LiteLLM proxy
+
+This keeps per-project env isolation without needing `uv` or a system
+Python on the user's machine.
+"""
+
+import argparse
+import os
+import sys
+from pathlib import Path
+
+
+def _repo_api_dir() -> Path:
+    # Source: <repo>/celebi/__main__.py -> <repo>/api
+    # Frozen: <bundle>/_internal/celebi/__main__.pyc -> <bundle>/_internal/api
+    return Path(__file__).resolve().parent.parent / "api"
+
+
+def _serve_proxy() -> int:
+    proxy_port = int(os.environ.get("CELEBI_PROXY_PORT", "8000"))
+    api_dir = _repo_api_dir()
+    if str(api_dir) not in sys.path:
+        sys.path.insert(0, str(api_dir))
+
+    from uvicorn import Config, Server
+
+    from app.main import app
+
+    server = Server(Config(app=app, host="127.0.0.1", port=proxy_port, log_level="info"))
+    server.run()
+    return 0
+
+
+def _serve_litellm(config_path: str, port: int) -> int:
+    # litellm's proxy startup loads the YAML pointed to by CONFIG_FILE_PATH.
+    os.environ["CONFIG_FILE_PATH"] = config_path
+
+    from litellm.proxy.proxy_server import app
+    from uvicorn import Config, Server
+
+    server = Server(Config(app=app, host="127.0.0.1", port=port, log_level="info"))
+    server.run()
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(prog="celebi", add_help=False)
+    parser.add_argument("--serve-proxy", action="store_true")
+    parser.add_argument("--serve-litellm", action="store_true")
+    parser.add_argument("--config", default=None)
+    parser.add_argument("--port", default=None)
+    args, _unknown = parser.parse_known_args()
+
+    if args.serve_proxy:
+        return _serve_proxy()
+    if args.serve_litellm:
+        if not args.config or not args.port:
+            print("error: --serve-litellm requires --config <yaml> --port <n>", file=sys.stderr)
+            return 2
+        return _serve_litellm(args.config, int(args.port))
+
+    from celebi.app import main as gui_main
+
+    gui_main()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

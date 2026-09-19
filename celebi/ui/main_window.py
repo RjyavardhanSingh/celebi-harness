@@ -33,6 +33,18 @@ from celebi.ui.setup_wizard import SetupWizard
 API_DIR = Path(__file__).resolve().parent.parent.parent / "api"
 
 
+def is_frozen() -> bool:
+    """True when running from a PyInstaller bundle (no system Python/uv)."""
+    return getattr(sys, "frozen", False)
+
+
+def _server_workdir() -> str:
+    """Writable CWD for server child processes (install dir is read-only)."""
+    workdir = Path.home() / ".celebi"
+    workdir.mkdir(parents=True, exist_ok=True)
+    return str(workdir)
+
+
 class MainWindow(QMainWindow):
     """Celebi — wizard first, then dashboard."""
 
@@ -333,19 +345,35 @@ class MainWindow(QMainWindow):
             process_env.insert(k, v)
         litellm_proc.setProcessEnvironment(process_env)
 
-        litellm_proc.setWorkingDirectory(str(API_DIR))
-        uv_bin = shutil.which("uv") or "uv"
-        litellm_proc.start(
-            uv_bin,
-            [
-                "run",
-                "litellm",
-                "--config",
-                str(litellm_config_path),
-                "--port",
-                str(litellm_port),
-            ],
-        )
+        if is_frozen():
+            # Packaged app: re-exec our own binary in server mode.
+            # (`uv run` would try to create .venv inside the read-only
+            # install dir, and `uv` may not exist on user machines.)
+            litellm_proc.setWorkingDirectory(_server_workdir())
+            litellm_proc.start(
+                sys.executable,
+                [
+                    "--serve-litellm",
+                    "--config",
+                    str(litellm_config_path),
+                    "--port",
+                    str(litellm_port),
+                ],
+            )
+        else:
+            litellm_proc.setWorkingDirectory(str(API_DIR))
+            uv_bin = shutil.which("uv") or "uv"
+            litellm_proc.start(
+                uv_bin,
+                [
+                    "run",
+                    "litellm",
+                    "--config",
+                    str(litellm_config_path),
+                    "--port",
+                    str(litellm_port),
+                ],
+            )
 
         if not litellm_proc.waitForStarted(5000):
             self._dashboard.set_error("Failed to start LiteLLM")
@@ -361,21 +389,28 @@ class MainWindow(QMainWindow):
         proxy_env = proxy_proc.processEnvironment()
         proxy_env.insert("CELEBI_UPSTREAM_PORT", str(litellm_port))
         proxy_env.insert("CELEBI_PROXY_PORT", str(proxy_port))
+        proxy_env.insert("CELEBI_DATA_DIR", str(Path.home() / ".celebi"))
         proxy_proc.setProcessEnvironment(proxy_env)
 
-        proxy_proc.setWorkingDirectory(str(API_DIR))
-        proxy_proc.start(
-            sys.executable,
-            [
-                "-m",
-                "uvicorn",
-                "main:app",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                str(proxy_port),
-            ],
-        )
+        if is_frozen():
+            # Packaged app: sys.executable is the frozen binary, not a
+            # Python interpreter, so `-m uvicorn` would relaunch the GUI.
+            proxy_proc.setWorkingDirectory(_server_workdir())
+            proxy_proc.start(sys.executable, ["--serve-proxy"])
+        else:
+            proxy_proc.setWorkingDirectory(str(API_DIR))
+            proxy_proc.start(
+                sys.executable,
+                [
+                    "-m",
+                    "uvicorn",
+                    "main:app",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(proxy_port),
+                ],
+            )
 
         if not proxy_proc.waitForStarted(5000):
             litellm_proc.kill()

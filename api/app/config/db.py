@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import kuzu
@@ -14,7 +15,14 @@ logger = logging.getLogger(__name__)
 logger.info("Starting db connection")
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = str(BASE_DIR / "kuzu.db")
+# Packaged installs live in a read-only dir (/opt/celebi/...) — the GUI
+# sets CELEBI_DATA_DIR to a writable location (~/.celebi) for those.
+_data_dir = os.environ.get("CELEBI_DATA_DIR")
+if _data_dir:
+    Path(_data_dir).mkdir(parents=True, exist_ok=True)
+    DB_PATH = str(Path(_data_dir) / "kuzu.db")
+else:
+    DB_PATH = str(BASE_DIR / "kuzu.db")
 
 db = kuzu.Database(DB_PATH)
 conn = kuzu.Connection(db)

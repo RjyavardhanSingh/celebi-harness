@@ -66,7 +66,7 @@ Version: ${VERSION}
 Section: devel
 Priority: optional
 Architecture: ${ARCH}
-Depends: libegl1, libgl1, libxkbcommon0, libdbus-1-3
+Depends: libegl1, libgl1, libxkbcommon0, libdbus-1-3, libxcb-cursor0
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: Rajyavardhan Singh <rajyavardhan@users.noreply.github.com>
 Description: LLM Time Travel Harness

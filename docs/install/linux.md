@@ -42,6 +42,23 @@ The `.deb` package requires these system libraries (usually pre-installed):
 - `libgl1` — OpenGL
 - `libxkbcommon0` — keyboard handling
 - `libdbus-1-3` — D-Bus IPC
+- `libxcb-cursor0` — Qt platform plugin (xcb)
+
+## Troubleshooting
+
+**`Could not load the Qt platform plugin "xcb"`** — install the cursor
+library and retry (fixed in the `.deb` dependencies from v0.1.1 onward):
+
+```bash
+sudo apt install libxcb-cursor0
+```
+
+**Qt locale warning (`ANSI_X3.4-1968`)** — harmless; Qt falls back to
+`C.UTF-8` automatically. To silence it:
+
+```bash
+export LANG=C.UTF-8
+```
 
 ## Uninstall
 
