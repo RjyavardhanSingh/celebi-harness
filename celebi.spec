@@ -38,10 +38,17 @@ TIKTOKEN_HIDDEN_IMPORTS = collect_submodules('tiktoken_ext')
 
 # litellm reads pricing/config JSONs at runtime via importlib.resources.
 # Subpackages need their own entries (top-level pattern doesn't recurse).
+# The tokenizers dir is collected whole: besides anthropic_tokenizer.json
+# it holds pre-seeded tiktoken BPE blobs (extensionless hash names) that
+# litellm uses as its offline cache (default_encoding.py). Without them
+# every boot re-downloads and writes into the package dir — read-only
+# once installed. CUSTOM_TIKTOKEN_CACHE_DIR (set by the GUI for the
+# frozen child) covers any remaining writes.
 LITELLM_DATAS = (
     collect_data_files('litellm', includes=['*.json'])
-    + collect_data_files('litellm.litellm_core_utils.tokenizers', includes=['*.json'])
+    + collect_data_files('litellm.litellm_core_utils.tokenizers')
     + collect_data_files('litellm.proxy.public_endpoints', includes=['*.json'])
+    + collect_data_files('litellm.proxy', includes=['_lazy_openapi_snapshot.json'])
 )
 
 API_DATAS = _api_datas()

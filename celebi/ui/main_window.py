@@ -343,6 +343,14 @@ class MainWindow(QMainWindow):
         process_env = litellm_proc.processEnvironment()
         for k, v in litellm_env.items():
             process_env.insert(k, v)
+        if is_frozen():
+            # litellm defaults TIKTOKEN_CACHE_DIR to its own (read-only)
+            # package dir; redirect to a writable per-user dir instead.
+            # litellm creates it on startup (default_encoding.py).
+            process_env.insert(
+                "CUSTOM_TIKTOKEN_CACHE_DIR",
+                str(Path.home() / ".celebi" / "tiktoken-cache"),
+            )
         litellm_proc.setProcessEnvironment(process_env)
 
         if is_frozen():
