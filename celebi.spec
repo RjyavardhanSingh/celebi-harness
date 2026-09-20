@@ -36,19 +36,37 @@ def _api_datas():
 # at runtime — invisible to static analysis, so collect them explicitly.
 TIKTOKEN_HIDDEN_IMPORTS = collect_submodules('tiktoken_ext')
 
-# litellm reads pricing/config JSONs at runtime via importlib.resources.
-# Subpackages need their own entries (top-level pattern doesn't recurse).
-# The tokenizers dir is collected whole: besides anthropic_tokenizer.json
-# it holds pre-seeded tiktoken BPE blobs (extensionless hash names) that
-# litellm uses as its offline cache (default_encoding.py). Without them
-# every boot re-downloads and writes into the package dir — read-only
-# once installed. CUSTOM_TIKTOKEN_CACHE_DIR (set by the GUI for the
-# frozen child) covers any remaining writes.
-LITELLM_DATAS = (
-    collect_data_files('litellm', includes=['*.json'])
-    + collect_data_files('litellm.litellm_core_utils.tokenizers')
-    + collect_data_files('litellm.proxy.public_endpoints', includes=['*.json'])
-    + collect_data_files('litellm.proxy', includes=['_lazy_openapi_snapshot.json'])
+# litellm reads data files at runtime via importlib.resources and plain
+# filesystem paths (e.g. containers/endpoints.json, pricing JSONs,
+# autorouter presets, openapi snapshot). Top-level-only patterns miss
+# them, so walk the whole package recursively. Only data extensions are
+# taken (~7MB); UI assets, readmes and prisma files are left out.
+# The tokenizers subpackage additionally holds extensionless tiktoken
+# BPE blobs (litellm's offline cache), collected whole separately below.
+_LITELLM_DATA_SUFFIXES = {'.json', '.jsonl', '.yaml', '.yml', '.csv', '.prompt', '.pem'}
+
+
+def _litellm_datas():
+    from PyInstaller.utils.hooks import get_package_paths
+
+    _base, pkg_dir = get_package_paths('litellm')
+    root = Path(pkg_dir)
+    out = []
+    for p in sorted(root.rglob('*')):
+        if not p.is_file():
+            continue
+        if '__pycache__' in p.parts:
+            continue
+        if 'litellm_core_utils' in p.parts and 'tokenizers' in p.parts:
+            continue  # covered by whole-dir collect below
+        if p.suffix not in _LITELLM_DATA_SUFFIXES:
+            continue
+        out.append((str(p), str(Path('litellm') / p.relative_to(root).parent)))
+    return out
+
+
+LITELLM_DATAS = _litellm_datas() + collect_data_files(
+    'litellm.litellm_core_utils.tokenizers'
 )
 
 API_DATAS = _api_datas()
