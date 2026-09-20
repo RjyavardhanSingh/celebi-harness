@@ -4,7 +4,7 @@
 import sys
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 block_cipher = None
 
@@ -31,6 +31,10 @@ def _api_datas():
         out.append((str(p), str(Path('api') / p.relative_to(root).parent)))
     return out
 
+
+# tiktoken discovers encodings via pkgutil.iter_modules(tiktoken_ext.*)
+# at runtime — invisible to static analysis, so collect them explicitly.
+TIKTOKEN_HIDDEN_IMPORTS = collect_submodules('tiktoken_ext')
 
 # litellm reads pricing/config JSONs at runtime via importlib.resources.
 # Subpackages need their own entries (top-level pattern doesn't recurse).
@@ -150,6 +154,8 @@ a = Analysis(
         'pydantic',
         # --- litellm (comprehensive) ---
         *LITELLM_HIDDEN_IMPORTS,
+        # --- tiktoken plugin discovery (pkgutil.iter_modules) ---
+        *TIKTOKEN_HIDDEN_IMPORTS,
     ],
     hookspath=[],
     hooksconfig={},
