@@ -46,6 +46,21 @@ TIKTOKEN_HIDDEN_IMPORTS = collect_submodules('tiktoken_ext')
 _LITELLM_DATA_SUFFIXES = {'.json', '.jsonl', '.yaml', '.yml', '.csv', '.prompt', '.pem'}
 
 
+def _under(parts, *anchor):
+    """True if path parts contain the anchor sequence consecutively."""
+    n = len(anchor)
+    return any(tuple(parts[i : i + n]) == anchor for i in range(len(parts) - n + 1))
+
+
+# Web UIs mounted by proxy_server at import time via Starlette StaticFiles
+# (missing dir = hard RuntimeError, not a warning):
+# - proxy/swagger → /docs ; - proxy/_experimental/out → admin UI.
+_STATIC_DIRS = (
+    ('proxy', 'swagger'),
+    ('proxy', '_experimental', 'out'),
+)
+
+
 def _litellm_datas():
     from PyInstaller.utils.hooks import get_package_paths
 
@@ -59,7 +74,9 @@ def _litellm_datas():
             continue
         if 'litellm_core_utils' in p.parts and 'tokenizers' in p.parts:
             continue  # covered by whole-dir collect below
-        if p.suffix not in _LITELLM_DATA_SUFFIXES:
+        if any(_under(p.parts, *anchor) for anchor in _STATIC_DIRS):
+            pass  # ship web UIs whole (js/css/png/... all needed)
+        elif p.suffix not in _LITELLM_DATA_SUFFIXES:
             continue
         out.append((str(p), str(Path('litellm') / p.relative_to(root).parent)))
     return out
